@@ -6,11 +6,11 @@ export function notesToMarkdown(book: Book, highlights: Highlight[]) {
   lines.push('')
 
   if (book.notes.trim()) {
-    lines.push('## Notebook', '', book.notes.trim(), '')
+    lines.push('## Notes', '', book.notes.trim(), '')
   }
 
   if (highlights.length) {
-    lines.push('## Highlights', '')
+    lines.push('## Annotations', '')
     for (const h of highlights) {
       lines.push(`> ${h.text.replace(/\s+/g, ' ').trim()}`, `>`, `> — p. ${h.page}`)
       if (h.note.trim()) lines.push('', h.note.trim())

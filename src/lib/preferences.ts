@@ -13,6 +13,10 @@ export type UiFont = keyof typeof UI_FONTS
 export const ROUNDNESS = { crisp: 0.25, soft: 0.75, round: 1.25 } as const
 export type Roundness = keyof typeof ROUNDNESS
 
+/** continuous = free scrolling; single / double = one page or a two-page spread at a time */
+export type PageLayout = 'continuous' | 'single' | 'double'
+export type ScrollDirection = 'vertical' | 'horizontal'
+
 export type Settings = {
   themeId: string
   customThemes: Theme[]
@@ -25,8 +29,9 @@ export type Settings = {
   grain: boolean
   reduceMotion: boolean
   pageGap: number
-  spread: boolean
-  dailyGoalMinutes: number
+  pageLayout: PageLayout
+  scrollDirection: ScrollDirection
+  margins: boolean
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +45,7 @@ export const DEFAULT_SETTINGS: Settings = {
   grain: true,
   reduceMotion: false,
   pageGap: 20,
-  spread: false,
-  dailyGoalMinutes: 20,
+  pageLayout: 'continuous',
+  scrollDirection: 'vertical',
+  margins: false,
 }

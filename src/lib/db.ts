@@ -8,7 +8,7 @@ export type Bookmark = {
 
 export type ReadingPosition = {
   page: number
-  /** 0–1, how far down the page the top of the viewport sits */
+  /** 0–1, how far along the page the middle of the viewport sits */
   offset: number
 }
 

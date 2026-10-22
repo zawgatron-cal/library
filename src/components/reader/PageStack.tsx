@@ -2,57 +2,17 @@ import { memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, use
 import { Page } from 'react-pdf'
 import type { Highlight, ReadingPosition, Rect } from '../../lib/db'
 import { escapeHtml, escapeRegExp } from '../../lib/format'
+import type { PageLayout, ScrollDirection } from '../../lib/preferences'
 import type { PageMode } from '../../lib/themes'
-
-export type PageSize = { w: number; h: number }
+import { FACING_GAP, MARGIN_GAP, MARGIN_W, PAD, READING_LINE, buildLayout, cellIndexAt, type Cell, type PageSize } from './layout'
 
 export type SelectionPart = { page: number; rects: Rect[] }
 export type PendingSelection = { parts: SelectionPart[]; text: string; anchor: { x: number; y: number } }
 
 export type PageStackHandle = {
   scrollToPage: (page: number, options?: { smooth?: boolean; offset?: number }) => void
-  scrollBy: (dy: number) => void
-}
-
-type Row = { pages: number[]; top: number; height: number; width: number }
-
-const PAD_Y = 36
-const PAD_X = 32
-const FACING_GAP = 2
-/** Where in the viewport (0 = top) a page has to reach to count as "the current page". */
-const READING_LINE = 0.35
-/** Saved positions are measured this far below the viewport top, clear of scroll rounding and page gaps. */
-const POSITION_ANCHOR = 24
-
-function buildRows(sizes: PageSize[], scale: number, spread: boolean, gap: number) {
-  const groups: number[][] = []
-  if (spread) {
-    groups.push([1])
-    for (let p = 2; p <= sizes.length; p += 2) groups.push(p + 1 <= sizes.length ? [p, p + 1] : [p])
-  } else {
-    for (let p = 1; p <= sizes.length; p++) groups.push([p])
-  }
-
-  const rows: Row[] = []
-  let top = PAD_Y
-  for (const pages of groups) {
-    const width = pages.reduce((sum, p) => sum + sizes[p - 1].w * scale, 0) + FACING_GAP * (pages.length - 1)
-    const height = Math.max(...pages.map((p) => sizes[p - 1].h * scale))
-    rows.push({ pages, top, height, width })
-    top += height + gap
-  }
-  return { rows, totalHeight: top - gap + PAD_Y, maxWidth: Math.max(0, ...rows.map((r) => r.width)) }
-}
-
-function rowIndexAt(rows: Row[], y: number) {
-  let lo = 0
-  let hi = rows.length - 1
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1
-    if (rows[mid].top <= y) lo = mid
-    else hi = mid - 1
-  }
-  return lo
+  /** Keep the content under this viewport point fixed through the next layout change (e.g. zoom). */
+  anchorAt: (clientX: number, clientY: number) => void
 }
 
 function mergeRects(rects: Rect[]) {
@@ -83,8 +43,7 @@ function readSelection(container: HTMLElement): PendingSelection | null {
   const text = selection.toString().trim()
   if (!text) return null
 
-  const pageEls = [...container.querySelectorAll<HTMLElement>('[data-page]')]
-  const pageBoxes = pageEls.map((el) => ({ page: Number(el.dataset.page), box: el.getBoundingClientRect() }))
+  const pageBoxes = [...container.querySelectorAll<HTMLElement>('[data-page]')].map((el) => ({ page: Number(el.dataset.page), box: el.getBoundingClientRect() }))
   const byPage = new Map<number, Rect[]>()
 
   for (const r of range.getClientRects()) {
@@ -107,50 +66,81 @@ function readSelection(container: HTMLElement): PendingSelection | null {
   return { parts, text, anchor: { x: last.right, y: last.bottom } }
 }
 
+/** Snap points with scroll-snap-stop would halt programmatic jumps at the next page, so pause snapping meanwhile. */
+function scrollWithoutSnap(el: HTMLElement, options: ScrollToOptions) {
+  el.dataset.snapPaused = 'true'
+  el.scrollTo(options)
+  const resume = () => delete el.dataset.snapPaused
+  if (options.behavior === 'smooth') {
+    const timer = setTimeout(resume, 1200)
+    el.addEventListener(
+      'scrollend',
+      () => {
+        clearTimeout(timer)
+        resume()
+      },
+      { once: true },
+    )
+  } else {
+    requestAnimationFrame(resume)
+  }
+}
+
+function useDebounced<T>(value: T, ms: number) {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const timer = setTimeout(() => setDebounced(value), ms)
+    return () => clearTimeout(timer)
+  }, [value, ms])
+  return debounced
+}
+
+type Anchor = { page: number; offset: number; crossFrac: number; viewMain: number; viewCross: number }
+
 type Props = {
   pageSizes: PageSize[]
   scale: number
-  spread: boolean
+  layout: PageLayout
+  direction: ScrollDirection
+  margins: boolean
   gap: number
   pageMode: PageMode
   initialPosition: ReadingPosition | null
   highlights: Highlight[]
   activeHighlightId: string | null
+  bookmarkedPages: Set<number>
   searchQuery: string
   onScrollPosition: (position: ReadingPosition, currentPage: number) => void
-  onResize: (width: number) => void
+  onResize: (width: number, height: number) => void
   onSelection: (selection: PendingSelection | null) => void
   onHighlightClick: (highlight: Highlight, anchor: { x: number; y: number }) => void
+  onHighlightHover: (id: string | null) => void
+  onToggleBookmark: (page: number) => void
+  onPinchZoom: (factor: number) => void
   ref?: Ref<PageStackHandle>
 }
 
-export function PageStack({
-  pageSizes,
-  scale,
-  spread,
-  gap,
-  pageMode,
-  initialPosition,
-  highlights,
-  activeHighlightId,
-  searchQuery,
-  onScrollPosition,
-  onResize,
-  onSelection,
-  onHighlightClick,
-  ref,
-}: Props) {
-  const scrollEl = useRef<HTMLDivElement>(null)
-  const [viewport, setViewport] = useState({ top: 0, height: 800, width: 800 })
-  const positionRef = useRef<ReadingPosition>(initialPosition ?? { page: 1, offset: 0 })
-  const frame = useRef(0)
+export function PageStack(props: Props) {
+  const { pageSizes, scale, layout, direction, margins, gap, pageMode, initialPosition, highlights, activeHighlightId, bookmarkedPages, searchQuery } = props
+  const { onScrollPosition, onResize, onSelection, onHighlightClick, onHighlightHover, onToggleBookmark, onPinchZoom, ref } = props
+  const vertical = direction === 'vertical'
+  const paged = layout !== 'continuous'
 
-  const { rows, totalHeight, maxWidth } = useMemo(() => buildRows(pageSizes, scale, spread, gap), [pageSizes, scale, spread, gap])
-  const rowOfPage = useMemo(() => {
+  const scrollEl = useRef<HTMLDivElement>(null)
+  const [viewport, setViewport] = useState({ scroll: 0, width: 0, height: 0 })
+  const anchor = useRef<Anchor>({ page: initialPosition?.page ?? 1, offset: initialPosition?.offset ?? 0, crossFrac: 0.5, viewMain: -1, viewCross: -1 })
+  const frame = useRef(0)
+  const renderScale = useDebounced(scale, 220)
+
+  const viewMain = vertical ? viewport.height : viewport.width
+  const viewCross = vertical ? viewport.width : viewport.height
+  const opts = useMemo(() => ({ layout, direction, margins }), [layout, direction, margins])
+  const { cells, total, crossTotal } = useMemo(() => buildLayout(pageSizes, scale, opts, gap, viewMain, viewCross), [pageSizes, scale, opts, gap, viewMain, viewCross])
+  const cellOfPage = useMemo(() => {
     const map = new Map<number, number>()
-    rows.forEach((row, i) => row.pages.forEach((p) => map.set(p, i)))
+    cells.forEach((cell, i) => cell.pages.forEach((p) => map.set(p, i)))
     return map
-  }, [rows])
+  }, [cells])
 
   const highlightsByPage = useMemo(() => {
     const map = new Map<number, Highlight[]>()
@@ -168,75 +158,160 @@ export function PageStack({
     return ({ str }: { str: string }) => str.split(pattern).map((part, i) => (i % 2 ? `<mark>${escapeHtml(part)}</mark>` : escapeHtml(part))).join('')
   }, [searchQuery])
 
+  const contentMain = useCallback((cell: Cell) => (vertical ? cell.contentH : cell.contentW), [vertical])
+  const contentStart = useCallback((cell: Cell) => cell.start + (cell.size - contentMain(cell)) / 2, [contentMain])
+
+  const measure = useCallback(
+    (atMain: number, atCross: number): Anchor | null => {
+      const el = scrollEl.current
+      if (!el || !cells.length) return null
+      const scrollMain = vertical ? el.scrollTop : el.scrollLeft
+      const scrollCross = vertical ? el.scrollLeft : el.scrollTop
+      const point = scrollMain + atMain
+      let idx = cellIndexAt(cells, point)
+      if (point > cells[idx].start + cells[idx].size && idx < cells.length - 1) idx++
+      const cell = cells[idx]
+      const offset = Math.min(1, Math.max(0, (point - contentStart(cell)) / contentMain(cell)))
+      return { page: cell.pages[0], offset, crossFrac: (scrollCross + atCross) / crossTotal, viewMain: atMain, viewCross: atCross }
+    },
+    [cells, vertical, contentStart, contentMain, crossTotal],
+  )
+
   const report = useCallback(() => {
     const el = scrollEl.current
-    if (!el || !rows.length) return
-    const top = el.scrollTop
-    const anchor = top + POSITION_ANCHOR
-    let rowIdx = rowIndexAt(rows, anchor)
-    if (anchor > rows[rowIdx].top + rows[rowIdx].height && rowIdx < rows.length - 1) rowIdx++
-    const row = rows[rowIdx]
-    const position = { page: row.pages[0], offset: Math.min(1, Math.max(0, (anchor - row.top) / row.height)) }
-    positionRef.current = position
-    const readingRow = rows[rowIndexAt(rows, top + el.clientHeight * READING_LINE)]
-    const atEnd = top + el.clientHeight >= el.scrollHeight - 4
-    onScrollPosition(position, atEnd ? pageSizes.length : readingRow.pages[0])
-  }, [rows, onScrollPosition, pageSizes.length])
+    if (!el || !cells.length) return
+    const main = vertical ? el.clientHeight : el.clientWidth
+    const cross = vertical ? el.clientWidth : el.clientHeight
+    const center = measure(main / 2, cross / 2)
+    if (!center) return
+    anchor.current = center
+    const scrollMain = vertical ? el.scrollTop : el.scrollLeft
+    const scrollSize = vertical ? el.scrollHeight : el.scrollWidth
+    const reading = cells[cellIndexAt(cells, scrollMain + main * (paged ? 0.5 : READING_LINE))]
+    const atEnd = scrollMain + main >= scrollSize - 4
+    onScrollPosition({ page: center.page, offset: center.offset }, atEnd ? pageSizes.length : reading.pages[0])
+  }, [cells, vertical, paged, measure, onScrollPosition, pageSizes.length])
 
   const onScroll = () => {
     cancelAnimationFrame(frame.current)
     frame.current = requestAnimationFrame(() => {
       const el = scrollEl.current
       if (!el) return
-      setViewport((v) => ({ ...v, top: el.scrollTop }))
+      setViewport((v) => ({ ...v, scroll: vertical ? el.scrollTop : el.scrollLeft }))
       report()
     })
   }
 
-  // Keep the reader's place whenever the layout changes (zoom, spread, resize).
+  // Keep the reader's place whenever the layout changes (zoom, layout mode, resize).
   useLayoutEffect(() => {
     const el = scrollEl.current
-    if (!el || !rows.length) return
-    const { page, offset } = positionRef.current
-    const row = rows[rowOfPage.get(Math.min(page, pageSizes.length)) ?? 0]
-    el.scrollTop = row.top + offset * row.height - POSITION_ANCHOR
-    setViewport((v) => ({ ...v, top: el.scrollTop }))
+    if (!el || !cells.length || !viewport.width) return
+    const a = anchor.current
+    const cell = cells[cellOfPage.get(Math.min(a.page, pageSizes.length)) ?? 0]
+    const main = vertical ? el.clientHeight : el.clientWidth
+    const cross = vertical ? el.clientWidth : el.clientHeight
+    const atMain = a.viewMain >= 0 ? a.viewMain : main / 2
+    const atCross = a.viewCross >= 0 ? a.viewCross : cross / 2
+    const targetMain = paged && a.viewMain < 0 && a.offset === 0 ? cell.start : contentStart(cell) + a.offset * contentMain(cell) - atMain
+    const targetCross = a.crossFrac * crossTotal - atCross
+    scrollWithoutSnap(el, vertical ? { top: targetMain, left: targetCross, behavior: 'instant' } : { left: targetMain, top: targetCross, behavior: 'instant' })
+    setViewport((v) => ({ ...v, scroll: vertical ? el.scrollTop : el.scrollLeft }))
     report()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows])
+  }, [cells, crossTotal])
 
   useEffect(() => {
     const el = scrollEl.current
     if (!el) return
     const observer = new ResizeObserver(() => {
       setViewport((v) => ({ ...v, height: el.clientHeight, width: el.clientWidth }))
-      onResize(el.clientWidth)
+      onResize(el.clientWidth, el.clientHeight)
     })
     observer.observe(el)
     return () => observer.disconnect()
   }, [onResize])
 
+  // Wheel: pinch / ctrl+wheel zooms around the cursor; paged modes turn whole pages per gesture and horizontal mode maps the wheel sideways.
+  const wheelState = useRef({ acc: 0, lockedUntil: 0 })
+  const latest = useRef({ measure, onPinchZoom, vertical, paged, cells })
+  useEffect(() => {
+    latest.current = { measure, onPinchZoom, vertical, paged, cells }
+  })
+  useEffect(() => {
+    const el = scrollEl.current
+    if (!el) return
+    const onWheel = (e: WheelEvent) => {
+      const { measure, onPinchZoom, vertical, paged, cells } = latest.current
+      if (e.ctrlKey || e.metaKey) {
+        e.preventDefault()
+        const box = el.getBoundingClientRect()
+        const atMain = vertical ? e.clientY - box.top : e.clientX - box.left
+        const atCross = vertical ? e.clientX - box.left : e.clientY - box.top
+        const a = measure(atMain, atCross)
+        if (a) anchor.current = a
+        // mouse wheels send ~100 per notch, trackpad pinches send small deltas
+        const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
+        onPinchZoom(Math.exp(-Math.max(-50, Math.min(50, delta)) * 0.0025))
+        return
+      }
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
+      if (vertical) {
+        // Paged and vertical: step whole pages unless zoomed past the viewport, where native scroll pans.
+        if (!paged) return
+        const idx = cellIndexAt(cells, el.scrollTop + el.clientHeight / 2)
+        if (cells[idx] && cells[idx].contentH > el.clientHeight + 1) return
+      } else if (el.scrollHeight > el.clientHeight + 1 && !paged) return
+      e.preventDefault()
+      if (!paged) {
+        el.scrollLeft += e.deltaY
+        return
+      }
+      const state = wheelState.current
+      if (Date.now() < state.lockedUntil) return
+      state.acc += e.deltaY
+      if (Math.abs(state.acc) < 40) return
+      const pos = vertical ? el.scrollTop + el.clientHeight / 2 : el.scrollLeft + el.clientWidth / 2
+      const idx = cellIndexAt(cells, pos)
+      const next = cells[Math.max(0, Math.min(cells.length - 1, idx + Math.sign(state.acc)))]
+      state.acc = 0
+      state.lockedUntil = Date.now() + 450
+      scrollWithoutSnap(el, vertical ? { top: next.start, behavior: 'smooth' } : { left: next.start, behavior: 'smooth' })
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [])
+
   useImperativeHandle(
     ref,
     () => ({
-      scrollToPage(page, { smooth = true, offset = 0 } = {}) {
+      scrollToPage(page, { smooth = true, offset } = {}) {
         const el = scrollEl.current
-        const idx = rowOfPage.get(Math.max(1, Math.min(page, pageSizes.length)))
+        const idx = cellOfPage.get(Math.max(1, Math.min(page, pageSizes.length)))
         if (!el || idx === undefined) return
-        const row = rows[idx]
-        const top = offset ? row.top + offset * row.height - el.clientHeight * READING_LINE : row.top - Math.min(gap, PAD_Y) / 2 - 4
-        el.scrollTo({ top: Math.max(0, top), behavior: smooth ? 'smooth' : 'auto' })
+        const cell = cells[idx]
+        const main = vertical ? el.clientHeight : el.clientWidth
+        let target: number
+        if (offset !== undefined && vertical) target = contentStart(cell) + offset * cell.contentH - main * READING_LINE
+        else if (paged) target = cell.start
+        else target = cell.start - Math.min(gap, PAD) / 2 - 4
+        const behavior = smooth ? 'smooth' : 'instant'
+        scrollWithoutSnap(el, vertical ? { top: Math.max(0, target), behavior } : { left: Math.max(0, target), behavior })
       },
-      scrollBy(dy) {
-        scrollEl.current?.scrollBy({ top: dy, behavior: 'smooth' })
+      anchorAt(clientX, clientY) {
+        const el = scrollEl.current
+        if (!el) return
+        const box = el.getBoundingClientRect()
+        const a = measure(vertical ? clientY - box.top : clientX - box.left, vertical ? clientX - box.left : clientY - box.top)
+        if (a) anchor.current = a
       },
     }),
-    [rows, rowOfPage, pageSizes.length, gap],
+    [cells, cellOfPage, pageSizes.length, gap, vertical, paged, contentStart, measure],
   )
 
   const handleMouseUp = (e: React.MouseEvent) => {
     const container = scrollEl.current
     if (!container || e.button !== 0) return
+    if ((e.target as HTMLElement).closest('[data-margin], [data-ribbon]')) return
     const selection = readSelection(container)
     if (selection) {
       onSelection(selection)
@@ -256,32 +331,68 @@ export function PageStack({
     if (hit) onHighlightClick(hit, { x: e.clientX, y: e.clientY + 8 })
   }
 
-  const buffer = viewport.height * 1.25
-  const visibleRows: Row[] = []
-  if (rows.length) {
-    for (let i = rowIndexAt(rows, viewport.top - buffer); i < rows.length && rows[i].top <= viewport.top + viewport.height + buffer; i++) {
-      visibleRows.push(rows[i])
-    }
+  const buffer = viewMain * 1.25
+  const visible: Cell[] = []
+  if (cells.length && viewMain) {
+    for (let i = cellIndexAt(cells, viewport.scroll - buffer); i < cells.length && cells[i].start <= viewport.scroll + viewMain + buffer; i++) visible.push(cells[i])
   }
-  const innerWidth = Math.max(viewport.width, maxWidth + PAD_X * 2)
 
   return (
-    <div ref={scrollEl} onScroll={onScroll} onMouseUp={handleMouseUp} data-page-mode={pageMode} className="relative h-full overflow-auto outline-none" tabIndex={-1}>
-      <div className="relative" style={{ height: totalHeight, width: innerWidth }}>
-        {visibleRows.map((row) => (
-          <div key={row.pages[0]} className="absolute flex" style={{ top: row.top, left: (innerWidth - row.width) / 2, gap: FACING_GAP }}>
-            {row.pages.map((p) => (
-              <PdfPage
-                key={p}
-                pageNumber={p}
-                size={pageSizes[p - 1]}
-                scale={scale}
-                pageMode={pageMode}
-                highlights={highlightsByPage.get(p)}
-                activeHighlightId={activeHighlightId}
-                textRenderer={textRenderer}
-              />
-            ))}
+    <div
+      ref={scrollEl}
+      onScroll={onScroll}
+      onMouseUp={handleMouseUp}
+      data-page-mode={pageMode}
+      className="relative h-full overflow-auto overscroll-contain outline-none"
+      data-snap={paged ? (vertical ? 'y' : 'x') : undefined}
+      tabIndex={-1}
+    >
+      <div className="relative" style={vertical ? { height: total, width: crossTotal } : { width: total, height: crossTotal }}>
+        {visible.map((cell) => (
+          <div
+            key={cell.pages[0]}
+            className="absolute flex items-center justify-center"
+            style={{
+              ...(vertical ? { top: cell.start, left: 0, height: cell.size, width: crossTotal } : { left: cell.start, top: 0, width: cell.size, height: crossTotal }),
+              scrollSnapAlign: paged ? 'start' : undefined,
+              scrollSnapStop: paged ? 'always' : undefined,
+            }}
+          >
+            <div className="flex items-start" style={{ gap: FACING_GAP }}>
+              {cell.pages.map((p, i) => {
+                const size = pageSizes[p - 1]
+                const side = cell.pages.length === 2 && i === 0 ? 'left' : 'right'
+                const pageHighlights = highlightsByPage.get(p)
+                const column = margins && (
+                  <MarginColumn
+                    side={side}
+                    highlights={pageHighlights}
+                    pageHeight={size.h * scale}
+                    activeHighlightId={activeHighlightId}
+                    onOpen={onHighlightClick}
+                    onHover={onHighlightHover}
+                  />
+                )
+                return (
+                  <div key={p} className="flex items-start" style={{ gap: MARGIN_GAP }}>
+                    {side === 'left' && column}
+                    <PdfPage
+                      pageNumber={p}
+                      size={size}
+                      scale={scale}
+                      renderScale={renderScale}
+                      pageMode={pageMode}
+                      highlights={pageHighlights}
+                      activeHighlightId={activeHighlightId}
+                      textRenderer={textRenderer}
+                      bookmarked={bookmarkedPages.has(p)}
+                      onToggleBookmark={onToggleBookmark}
+                    />
+                    {side === 'right' && column}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         ))}
       </div>
@@ -293,45 +404,149 @@ const PdfPage = memo(function PdfPage({
   pageNumber,
   size,
   scale,
+  renderScale,
   pageMode,
   highlights,
   activeHighlightId,
   textRenderer,
+  bookmarked,
+  onToggleBookmark,
 }: {
   pageNumber: number
   size: PageSize
   scale: number
+  renderScale: number
   pageMode: PageMode
   highlights?: Highlight[]
   activeHighlightId: string | null
   textRenderer?: (item: { str: string }) => string
+  bookmarked: boolean
+  onToggleBookmark: (page: number) => void
 }) {
+  // The page on screen stays at its last crisp render (stretched to the new size) until the next render finishes,
+  // so zooming never flashes blank.
+  const [shown, setShown] = useState(renderScale)
+  const layers = shown === renderScale ? [shown] : [shown, renderScale]
+
   return (
-    <div data-page={pageNumber} className="pdf-page shadow-soft" style={{ width: size.w * scale, height: size.h * scale }}>
-      <Page pageNumber={pageNumber} scale={scale} loading={null} customTextRenderer={textRenderer} renderAnnotationLayer renderTextLayer>
-        {pageMode === 'tint' && <div className="page-overlay page-tint" />}
-        {pageMode === 'night' && (
-          <>
-            <div className="page-overlay page-night-ink" />
-            <div className="page-overlay page-night-paper" />
-          </>
-        )}
-        {highlights && (
-          <div className="page-overlay highlight-layer">
-            {highlights.flatMap((h) =>
-              h.rects.map((r, i) => (
-                <div
-                  key={`${h.id}-${i}`}
-                  className="highlight-rect"
-                  data-color={h.color}
-                  data-active={h.id === activeHighlightId}
-                  style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` }}
-                />
-              )),
-            )}
-          </div>
-        )}
-      </Page>
+    <div data-page={pageNumber} className="pdf-page group/page shadow-soft" style={{ width: size.w * scale, height: size.h * scale }}>
+      {layers.map((layerScale) => (
+        <div
+          key={layerScale}
+          className="page-layer"
+          style={{
+            width: size.w * layerScale,
+            height: size.h * layerScale,
+            transform: `scale(${scale / layerScale})`,
+            opacity: layerScale === shown ? 1 : 0,
+            pointerEvents: layerScale === shown ? undefined : 'none',
+          }}
+        >
+          <Page
+            pageNumber={pageNumber}
+            scale={layerScale}
+            loading={null}
+            customTextRenderer={textRenderer}
+            renderAnnotationLayer
+            renderTextLayer
+            onRenderSuccess={layerScale !== shown ? () => setShown(layerScale) : undefined}
+          />
+        </div>
+      ))}
+      {pageMode === 'tint' && <div className="page-overlay page-tint" />}
+      {pageMode === 'night' && (
+        <>
+          <div className="page-overlay page-night-ink" />
+          <div className="page-overlay page-night-paper" />
+        </>
+      )}
+      {highlights && (
+        <div className="page-overlay highlight-layer">
+          {highlights.flatMap((h) =>
+            h.rects.map((r, i) => (
+              <div
+                key={`${h.id}-${i}`}
+                className="highlight-rect"
+                data-color={h.color}
+                data-active={h.id === activeHighlightId}
+                style={{ left: `${r.x * 100}%`, top: `${r.y * 100}%`, width: `${r.w * 100}%`, height: `${r.h * 100}%` }}
+              />
+            )),
+          )}
+        </div>
+      )}
+      <button
+        type="button"
+        data-ribbon
+        data-on={bookmarked}
+        className="bookmark-ribbon"
+        aria-label={bookmarked ? `Remove bookmark from page ${pageNumber}` : `Bookmark page ${pageNumber}`}
+        title={bookmarked ? 'Bookmarked — click to remove' : 'Bookmark this page'}
+        onClick={() => onToggleBookmark(pageNumber)}
+      />
     </div>
   )
 })
+
+function MarginColumn({
+  side,
+  highlights,
+  pageHeight,
+  activeHighlightId,
+  onOpen,
+  onHover,
+}: {
+  side: 'left' | 'right'
+  highlights?: Highlight[]
+  pageHeight: number
+  activeHighlightId: string | null
+  onOpen: (highlight: Highlight, anchor: { x: number; y: number }) => void
+  onHover: (id: string | null) => void
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const items = useMemo(() => [...(highlights ?? [])].sort((a, b) => (a.rects[0]?.y ?? 0) - (b.rects[0]?.y ?? 0)), [highlights])
+
+  // Place each note beside its highlight, nudging later ones down so they never overlap.
+  useLayoutEffect(() => {
+    const cards = ref.current ? [...ref.current.children] as HTMLElement[] : []
+    let bottom = -Infinity
+    cards.forEach((card, i) => {
+      const desired = (items[i]?.rects[0]?.y ?? 0) * pageHeight - 6
+      const top = Math.max(desired, bottom + 10)
+      card.style.top = `${top}px`
+      bottom = top + card.offsetHeight
+    })
+  }, [items, pageHeight])
+
+  return (
+    <div ref={ref} data-margin className="relative shrink-0" style={{ width: MARGIN_W, height: pageHeight }}>
+      {items.map((h) => (
+        <button
+          key={h.id}
+          type="button"
+          onMouseEnter={() => onHover(h.id)}
+          onMouseLeave={() => onHover(null)}
+          onClick={(e) => {
+            const box = e.currentTarget.getBoundingClientRect()
+            onOpen(h, { x: box.left + box.width / 2, y: box.bottom })
+          }}
+          className={`margin-note absolute inset-x-0 flex gap-2.5 rounded-md p-2.5 text-left transition ${side === 'left' ? 'flex-row-reverse text-right' : ''} ${
+            activeHighlightId === h.id ? 'bg-surface shadow-soft' : 'hover:bg-surface/70'
+          }`}
+        >
+          <span className="swatch w-1 shrink-0 self-stretch rounded-full" data-color={h.color} />
+          <span className="min-w-0 flex-1">
+            {h.note ? (
+              <>
+                <span className="line-clamp-5 font-display text-[0.82rem] leading-snug whitespace-pre-wrap text-ink">{h.note}</span>
+                <span className="mt-1 line-clamp-1 text-[0.7rem] text-muted italic">“{h.text}”</span>
+              </>
+            ) : (
+              <span className="line-clamp-3 font-display text-[0.78rem] leading-snug text-muted italic">“{h.text}”</span>
+            )}
+          </span>
+        </button>
+      ))}
+    </div>
+  )
+}

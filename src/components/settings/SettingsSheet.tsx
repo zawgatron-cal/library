@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Palette, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useSettings } from '../../lib/settings'
-import { UI_FONTS, type Roundness, type UiFont } from '../../lib/preferences'
+import { UI_FONTS, type PageLayout, type Roundness, type ScrollDirection, type UiFont } from '../../lib/preferences'
 import { isDark, type Theme, type ThemeColors } from '../../lib/themes'
 import { formatBytes } from '../../lib/format'
 import { Button, Field, Segmented, Sheet, Toggle, inputClass } from '../ui/primitives'
@@ -33,7 +33,28 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
           </Field>
           <Slider label="Tint strength" value={settings.tintStrength} min={0} max={100} step={5} format={(v) => `${v}%`} onChange={(tintStrength) => update({ tintStrength })} />
           <Slider label="Space between pages" value={settings.pageGap} min={0} max={56} step={4} format={(v) => `${v}px`} onChange={(pageGap) => update({ pageGap })} />
-          <Toggle label="Two-page spread" hint="Read side-by-side like an open book." checked={settings.spread} onChange={(spread) => update({ spread })} />
+          <Field label="Pages">
+            <Segmented<PageLayout>
+              value={settings.pageLayout}
+              onChange={(pageLayout) => update({ pageLayout })}
+              options={[
+                { value: 'continuous', label: 'Continuous' },
+                { value: 'single', label: 'One page' },
+                { value: 'double', label: 'Two pages' },
+              ]}
+            />
+          </Field>
+          <Field label="Scroll direction">
+            <Segmented<ScrollDirection>
+              value={settings.scrollDirection}
+              onChange={(scrollDirection) => update({ scrollDirection })}
+              options={[
+                { value: 'vertical', label: 'Vertical' },
+                { value: 'horizontal', label: 'Horizontal' },
+              ]}
+            />
+          </Field>
+          <Toggle label="Margin notes" hint="Show your annotations neatly beside each page." checked={settings.margins} onChange={(margins) => update({ margins })} />
         </div>
       </Section>
 
@@ -74,18 +95,6 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
           <Toggle label="Paper grain" hint="A faint texture, like real paper." checked={settings.grain} onChange={(grain) => update({ grain })} />
           <Toggle label="Reduce motion" hint="Turn off animations and smooth scrolling." checked={settings.reduceMotion} onChange={(reduceMotion) => update({ reduceMotion })} />
         </div>
-      </Section>
-
-      <Section title="Reading goal">
-        <Slider
-          label="Daily goal"
-          value={settings.dailyGoalMinutes}
-          min={5}
-          max={120}
-          step={5}
-          format={(v) => `${v} min`}
-          onChange={(dailyGoalMinutes) => update({ dailyGoalMinutes })}
-        />
       </Section>
 
       <Section title="Storage">

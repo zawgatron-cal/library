@@ -67,7 +67,7 @@ export function AnnotationPopover({ target, onClose, onCopied }: { target: Popov
     <div
       ref={ref}
       role="dialog"
-      aria-label="Highlight"
+      aria-label="Annotation"
       onMouseDown={(e) => {
         if (!(e.target instanceof HTMLTextAreaElement)) e.preventDefault()
       }}
