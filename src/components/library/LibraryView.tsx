@@ -1,18 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, BookOpen, Flame, Plus, Search, Settings2, Upload } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-react'
 import type { Book } from '../../lib/db'
-import { useBooks, useHighlightCounts } from '../../lib/hooks'
-import { bookProgress, displayPage, formatDuration, formatRelative, greeting } from '../../lib/format'
+import { useBooks, useHighlightCounts, useHighlights } from '../../lib/hooks'
+import { bookProgress, displayPage, formatRelative } from '../../lib/format'
 import { importPdf, isPdf } from '../../lib/pdf'
-import { useReadingLog } from '../../lib/readingLog'
-import { navigate } from '../../lib/router'
-import { useSettings } from '../../lib/settings'
 import { Wordmark } from '../ui/Logo'
 import { Button, IconButton, inputClass } from '../ui/primitives'
 import { useToast } from '../ui/toast'
 import { BookCard } from './BookCard'
 import { BookCover } from './BookCover'
-import { DeleteBookDialog, EditBookDialog } from './EditBookDialog'
+import { openBook } from '../../lib/router'
+import { BookDetailsSheet } from './BookDetails'
+import { DeleteBookDialog } from './DeleteBookDialog'
 
 type Filter = 'all' | 'reading' | 'unread' | 'finished' | 'favorites'
 type Sort = 'opened' | 'added' | 'title' | 'author' | 'progress'
@@ -39,9 +38,12 @@ const SORTERS: Record<Sort, (a: Book, b: Book) => number> = {
   progress: (a, b) => bookProgress(b) - bookProgress(a),
 }
 
+const CARD_MIN = 152
+const GAP_X = 28
+
 export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) {
   const books = useBooks()
-  const highlightCounts = useHighlightCounts()
+  const annotationCounts = useHighlightCounts()
   const toast = useToast()
   const fileInput = useRef<HTMLInputElement>(null)
   const [importing, setImporting] = useState(0)
@@ -49,7 +51,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
   const [filter, setFilter] = useState<Filter>('all')
   const [tag, setTag] = useState<string | null>(null)
   const [sort, setSort] = useState<Sort>('opened')
-  const [editing, setEditing] = useState<Book | null>(null)
+  const [detailsId, setDetailsId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Book | null>(null)
   const dragging = useFileDrag(handleFiles)
 
@@ -63,7 +65,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
     for (const file of pdfs) {
       try {
         const book = await importPdf(file)
-        toast(`Shelved “${book.title}”`)
+        toast(`Added “${book.title}”`)
       } catch (err) {
         console.error(err)
         toast(`Couldn't open ${file.name}`)
@@ -73,6 +75,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
     }
   }
 
+  const addBooks = () => fileInput.current?.click()
   const allTags = useMemo(() => [...new Set((books ?? []).flatMap((b) => b.tags))].sort(), [books])
 
   const visible = useMemo(() => {
@@ -88,9 +91,11 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
     () => (books ?? []).filter((b) => b.openedAt && !b.finishedAt).sort((a, b) => b.openedAt! - a.openedAt!)[0],
     [books],
   )
+  const detailsBook = books?.find((b) => b.id === detailsId)
+  const filtered = filter !== 'all' || !!tag || !!query.trim()
 
   return (
-    <div className="relative flex h-full flex-col">
+    <div className="relative flex h-full animate-fade-in flex-col">
       <header className="flex shrink-0 items-center gap-4 px-6 py-4 sm:px-10">
         <Wordmark />
         <div className="relative mx-auto hidden w-full max-w-sm md:block">
@@ -98,9 +103,9 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
           <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your shelves" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
-          {importing > 0 && <span className="mr-2 animate-pulse text-xs font-semibold text-muted">Shelving {importing}…</span>}
-          <Button variant="primary" onClick={() => fileInput.current?.click()}>
-            <Plus className="size-4" /> Add books
+          {importing > 0 && <span className="mr-2 animate-pulse text-xs font-semibold text-muted">Adding {importing}…</span>}
+          <Button variant="soft" size="sm" onClick={addBooks}>
+            <Plus className="size-3.5" /> Add
           </Button>
           <IconButton label="Appearance & settings" onClick={onOpenSettings}>
             <Settings2 />
@@ -119,63 +124,67 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         />
       </header>
 
-      <main className="flex-1 overflow-y-auto px-6 pb-16 sm:px-10">
-        {books === undefined ? null : books.length === 0 ? (
-          <EmptyShelf onAdd={() => fileInput.current?.click()} />
-        ) : (
+      <main className="flex-1 overflow-y-auto px-6 pb-20 sm:px-10">
+        {books === undefined ? null : (
           <div className="mx-auto max-w-6xl">
-            <section className="grid gap-5 pt-4 pb-8 lg:grid-cols-[1fr_auto]">
-              <div className="flex flex-col justify-end">
-                <h1 className="font-display text-4xl font-normal tracking-tight sm:text-5xl">{greeting()}.</h1>
-                <p className="mt-2 text-muted">
-                  {books.length} {books.length === 1 ? 'book' : 'books'} on your shelves
-                  {current ? ' — pick up where you left off?' : ' — what shall we read today?'}
-                </p>
-              </div>
-              <GoalCard />
-            </section>
-
             {current && <ContinueCard book={current} />}
 
-            <div className="sticky top-0 z-10 -mx-2 mb-6 flex flex-wrap items-center gap-2 bg-canvas/85 px-2 py-3 backdrop-blur-md">
-              <div className="relative w-full md:hidden">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-                <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your shelves" value={query} onChange={(e) => setQuery(e.target.value)} />
-              </div>
-              {FILTERS.map((f) => (
-                <Chip key={f.value} active={filter === f.value} onClick={() => setFilter(f.value)}>
-                  {f.label}
-                </Chip>
-              ))}
-              {allTags.length > 0 && <span className="mx-1 h-5 w-px bg-line-strong" />}
-              {allTags.map((t) => (
-                <Chip key={t} active={tag === t} onClick={() => setTag(tag === t ? null : t)}>
-                  # {t}
-                </Chip>
-              ))}
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as Sort)}
-                className="ml-auto rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none"
-                aria-label="Sort by"
-              >
-                <option value="opened">Recently read</option>
-                <option value="added">Recently added</option>
-                <option value="title">Title</option>
-                <option value="author">Author</option>
-                <option value="progress">Progress</option>
-              </select>
-            </div>
-
-            {visible.length ? (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-x-6 gap-y-9">
-                {visible.map((book) => (
-                  <BookCard key={book.id} book={book} highlightCount={highlightCounts[book.id] ?? 0} onEdit={() => setEditing(book)} onDelete={() => setDeleting(book)} />
+            {books.length > 0 && (
+              <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center gap-2 bg-canvas/85 px-2 py-3 backdrop-blur-md">
+                <div className="relative w-full md:hidden">
+                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
+                  <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your shelves" value={query} onChange={(e) => setQuery(e.target.value)} />
+                </div>
+                {FILTERS.map((f) => (
+                  <Chip key={f.value} active={filter === f.value} onClick={() => setFilter(f.value)}>
+                    {f.label}
+                  </Chip>
                 ))}
+                {allTags.length > 0 && <span className="mx-1 h-5 w-px bg-line-strong" />}
+                {allTags.map((t) => (
+                  <Chip key={t} active={tag === t} onClick={() => setTag(tag === t ? null : t)}>
+                    # {t}
+                  </Chip>
+                ))}
+                <span className="ml-auto text-xs text-muted">
+                  {visible.length} of {books.length}
+                </span>
+                <select
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as Sort)}
+                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none"
+                  aria-label="Sort by"
+                >
+                  <option value="opened">Recently read</option>
+                  <option value="added">Recently added</option>
+                  <option value="title">Title</option>
+                  <option value="author">Author</option>
+                  <option value="progress">Progress</option>
+                </select>
               </div>
-            ) : (
-              <p className="py-16 text-center text-muted">Nothing on this shelf yet.</p>
             )}
+
+            <Shelves>
+              {[
+                ...(filtered ? [] : [<AddTile key="add" onClick={addBooks} busy={importing > 0} />]),
+                ...visible.map((book) => (
+                  <BookCard
+                    key={book.id}
+                    book={book}
+                    annotationCount={annotationCounts[book.id] ?? 0}
+                    onDetails={() => setDetailsId(book.id)}
+                    onDelete={() => setDeleting(book)}
+                  />
+                )),
+              ]}
+            </Shelves>
+
+            {books.length === 0 && (
+              <p className="mx-auto mt-4 max-w-md text-center text-sm leading-relaxed text-muted">
+                Add PDFs of books, papers or course readers. They're kept on this computer — private, offline, and right where you left them.
+              </p>
+            )}
+            {books.length > 0 && filtered && visible.length === 0 && <p className="py-10 text-center text-muted">Nothing on this shelf.</p>}
           </div>
         )}
       </main>
@@ -189,13 +198,75 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         </div>
       )}
 
-      {editing && <EditBookDialog book={editing} onClose={() => setEditing(null)} />}
+      {detailsBook && (
+        <BookDetailsSheet
+          key={detailsBook.id}
+          book={detailsBook}
+          annotationCount={annotationCounts[detailsBook.id] ?? 0}
+          onClose={() => setDetailsId(null)}
+          onDelete={() => {
+            setDetailsId(null)
+            setDeleting(detailsBook)
+          }}
+        />
+      )}
       {deleting && <DeleteBookDialog book={deleting} onClose={() => setDeleting(null)} />}
     </div>
   )
 }
 
-function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+/** Lays books out in rows, each resting on its own shelf. */
+function Shelves({ children }: { children: ReactNode[] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [width, setWidth] = useState(0)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const observer = new ResizeObserver(() => setWidth(el.clientWidth))
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
+  const cols = Math.max(2, Math.floor((width + GAP_X) / (CARD_MIN + GAP_X)))
+  const cardW = width ? (width - GAP_X * (cols - 1)) / cols : CARD_MIN
+  const rows: ReactNode[][] = []
+  for (let i = 0; i < children.length; i += cols) rows.push(children.slice(i, i + cols))
+
+  return (
+    <div ref={ref} className="space-y-10">
+      {width > 0 &&
+        rows.map((row, i) => (
+          <div key={i} className="relative animate-rise" style={{ animationDelay: `${Math.min(i, 6) * 60}ms` }}>
+            <div className="shelf-plank" style={{ top: cardW * 1.5 }} />
+            <div className="relative grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, columnGap: GAP_X }}>
+              {row}
+            </div>
+          </div>
+        ))}
+    </div>
+  )
+}
+
+function AddTile({ onClick, busy }: { onClick: () => void; busy: boolean }) {
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={onClick}
+        className="group/add flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-sm)+1px)] border-2 border-dashed border-line-strong bg-surface/40 text-muted transition duration-300 ease-out hover:-translate-y-1.5 hover:border-accent hover:bg-accent-soft/50 hover:text-accent-strong"
+      >
+        <span className="flex size-12 items-center justify-center rounded-full bg-surface shadow-soft transition group-hover/add:scale-105">
+          <Plus className={`size-5 ${busy ? 'animate-spin' : ''}`} />
+        </span>
+        <span className="font-display text-base font-medium">Add books</span>
+        <span className="px-4 text-center text-[0.7rem] leading-snug">or drop PDFs anywhere</span>
+      </button>
+    </div>
+  )
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
     <button
       type="button"
@@ -210,17 +281,25 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
 function ContinueCard({ book }: { book: Book }) {
   const progress = bookProgress(book)
   const page = displayPage(book.position, book.pageCount)
+  const highlights = useHighlights(book.id)
+  const latest = useMemo(() => [...highlights].sort((a, b) => b.createdAt - a.createdAt)[0], [highlights])
+
   return (
-    <section className="mb-10 flex animate-rise items-center gap-6 rounded-xl border border-line bg-surface p-5 shadow-soft sm:p-6">
-      <button type="button" className="w-20 shrink-0 sm:w-24" onClick={() => navigate({ view: 'reader', bookId: book.id })} aria-label={`Continue ${book.title}`}>
+    <section className="mt-2 mb-10 flex animate-rise items-center gap-6 rounded-xl border border-line bg-surface p-5 shadow-soft sm:gap-8 sm:p-7">
+      <button type="button" className="w-20 shrink-0 transition duration-300 ease-out hover:-translate-y-1 sm:w-24" onClick={(e) => openBook(book.id, e.currentTarget)} aria-label={`Continue ${book.title}`}>
         <BookCover book={book} />
       </button>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold tracking-wider text-accent uppercase">Continue reading</p>
+        <p className="text-xs font-bold tracking-wider text-accent uppercase">Where you left off</p>
         <h2 className="mt-1 truncate font-display text-2xl font-medium">{book.title}</h2>
         <p className="truncate text-sm text-muted">
-          {book.author || 'Unknown author'} · opened {formatRelative(book.openedAt!)}
+          {book.author || 'Unknown author'} · {formatRelative(book.openedAt!)}
         </p>
+        {latest && (
+          <p className="mt-3 line-clamp-2 max-w-2xl border-l-2 border-accent/40 pl-3 font-display text-sm leading-relaxed text-ink/80 italic">
+            {latest.note || `“${latest.text}”`}
+          </p>
+        )}
         <div className="mt-4 flex items-center gap-3">
           <div className="h-1.5 max-w-xs flex-1 overflow-hidden rounded-full bg-line">
             <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(progress * 100, 2)}%` }} />
@@ -230,92 +309,10 @@ function ContinueCard({ book }: { book: Book }) {
           </span>
         </div>
       </div>
-      <Button variant="primary" className="hidden sm:inline-flex" onClick={() => navigate({ view: 'reader', bookId: book.id })}>
+      <Button variant="primary" className="hidden sm:inline-flex" onClick={(e) => openBook(book.id, e.currentTarget.closest('section'))}>
         Continue <ArrowRight className="size-4" />
       </Button>
     </section>
-  )
-}
-
-function GoalCard() {
-  const { settings } = useSettings()
-  const { today, streak, week } = useReadingLog()
-  const goal = settings.dailyGoalMinutes * 60
-  const pct = Math.min(1, today / goal)
-  const max = Math.max(goal, ...week.map((d) => d.seconds))
-  const r = 26
-  const circumference = 2 * Math.PI * r
-
-  return (
-    <div className="flex items-center gap-5 rounded-xl border border-line bg-surface px-5 py-4 shadow-soft">
-      <div className="relative size-16 shrink-0">
-        <svg viewBox="0 0 64 64" className="size-full -rotate-90">
-          <circle cx="32" cy="32" r={r} fill="none" stroke="var(--color-line)" strokeWidth="6" />
-          <circle
-            cx="32"
-            cy="32"
-            r={r}
-            fill="none"
-            stroke="var(--accent)"
-            strokeWidth="6"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={circumference * (1 - pct)}
-            opacity={pct > 0 ? 1 : 0}
-            className="transition-[stroke-dashoffset] duration-700"
-          />
-        </svg>
-        <BookOpen className="absolute inset-0 m-auto size-5 text-accent" />
-      </div>
-      <div>
-        <p className="text-sm font-bold">{today < 60 ? 'No reading yet today' : `${formatDuration(today)} today`}</p>
-        <p className="text-xs text-muted">
-          {pct >= 1 ? 'Goal reached — lovely.' : `Goal: ${settings.dailyGoalMinutes} min`}
-          {streak > 1 && (
-            <span className="ml-2 inline-flex items-center gap-0.5 font-semibold text-accent-strong">
-              <Flame className="size-3" /> {streak}-day streak
-            </span>
-          )}
-        </p>
-        <div className="mt-2 flex h-6 items-end gap-1" aria-label="Reading this week">
-          {week.map((d, i) => (
-            <div key={d.key} className="flex flex-col items-center gap-0.5" title={`${formatDuration(d.seconds)}`}>
-              <div
-                className={`w-3 rounded-sm ${i === week.length - 1 ? 'bg-accent' : 'bg-[color-mix(in_oklab,var(--accent)_40%,var(--color-line))]'}`}
-                style={{ height: `${Math.max(2, (d.seconds / max) * 16)}px` }}
-              />
-              <span className="text-[0.55rem] leading-none font-bold text-muted">{d.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function EmptyShelf({ onAdd }: { onAdd: () => void }) {
-  return (
-    <div className="mx-auto flex max-w-lg animate-rise flex-col items-center py-16 text-center sm:py-24">
-      <svg viewBox="0 0 220 120" className="mb-8 w-64" aria-hidden="true">
-        <rect x="10" y="108" width="200" height="6" rx="3" fill="var(--color-line-strong)" />
-        <rect x="38" y="40" width="22" height="68" rx="3" fill="var(--accent)" opacity="0.85" />
-        <rect x="62" y="28" width="18" height="80" rx="3" fill="var(--color-line-strong)" />
-        <rect x="82" y="48" width="26" height="60" rx="3" fill="var(--color-accent-soft)" stroke="var(--color-line-strong)" />
-        <rect x="112" y="36" width="20" height="72" rx="3" transform="rotate(8 122 72)" fill="var(--muted)" opacity="0.5" />
-        <path d="M150 108c0-14 10-22 22-22s22 8 22 22z" fill="var(--color-line-strong)" />
-        <path d="M172 86c-2-14 4-26 14-32-1 12-5 22-14 32zM172 86c-6-10-16-14-24-12 6 8 14 12 24 12z" fill="var(--accent)" opacity="0.6" />
-        <rect x="42" y="52" width="14" height="2" rx="1" fill="var(--on-accent)" opacity="0.7" />
-        <rect x="42" y="58" width="10" height="2" rx="1" fill="var(--on-accent)" opacity="0.7" />
-      </svg>
-      <h1 className="font-display text-4xl font-normal tracking-tight">Your shelves are waiting.</h1>
-      <p className="mt-3 max-w-sm text-muted">
-        Drop in PDFs of books, papers, or course readers. They stay right here on your computer — private, offline, and always where you left them.
-      </p>
-      <Button variant="primary" className="mt-8" onClick={onAdd}>
-        <Plus className="size-4" /> Add your first book
-      </Button>
-      <p className="mt-3 text-xs text-muted">or drag files anywhere onto this window</p>
-    </div>
   )
 }
 

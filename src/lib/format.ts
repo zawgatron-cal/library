@@ -26,25 +26,14 @@ export function formatBytes(bytes: number) {
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`
 }
 
-export function greeting(date = new Date()) {
-  const h = date.getHours()
-  if (h < 5) return 'Up late'
-  if (h < 12) return 'Good morning'
-  if (h < 17) return 'Good afternoon'
-  if (h < 22) return 'Good evening'
-  return 'Good night'
-}
-
 export function bookProgress(book: { position: { page: number; offset: number } | null; pageCount: number; finishedAt: number | null }) {
   if (book.finishedAt) return 1
   if (!book.position || book.pageCount <= 1) return 0
   return Math.min(1, (book.position.page - 1 + book.position.offset) / (book.pageCount - 1))
 }
 
-/** The page a reader would say they're "on" for a saved position. */
-export function displayPage(position: { page: number; offset: number } | null, pageCount: number) {
-  if (!position) return 1
-  return Math.min(pageCount, position.page + (position.offset > 0.6 ? 1 : 0))
+export function displayPage(position: { page: number } | null, pageCount: number) {
+  return Math.min(pageCount, position?.page ?? 1)
 }
 
 export function escapeHtml(text: string) {
