@@ -1,0 +1,273 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where([data-dark='true'], [data-dark='true'] *));
+
+/*
+ * Every colour is driven by six theme variables set at runtime (see lib/settings.tsx).
+ * Everything else is mixed from those, so custom themes only need six picks.
+ */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-paper: var(--paper);
+  --color-line: color-mix(in oklab, var(--ink) 11%, var(--surface));
+  --color-line-strong: color-mix(in oklab, var(--ink) 22%, var(--surface));
+  --color-sunken: color-mix(in oklab, var(--ink) 5%, var(--canvas));
+  --color-hover: color-mix(in oklab, var(--ink) 6%, transparent);
+  --color-accent-soft: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  --color-accent-strong: color-mix(in oklab, var(--accent) 82%, var(--ink));
+
+  --font-sans: var(--ui-font);
+  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+
+  --radius-sm: calc(var(--radius-unit) * 0.5);
+  --radius-md: var(--radius-unit);
+  --radius-lg: calc(var(--radius-unit) * 1.4);
+  --radius-xl: calc(var(--radius-unit) * 1.9);
+
+  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--ink) 8%, transparent), 0 8px 24px -12px color-mix(in oklab, var(--ink) 22%, transparent);
+  --shadow-lifted: 0 2px 4px color-mix(in oklab, var(--ink) 8%, transparent), 0 24px 48px -20px color-mix(in oklab, var(--ink) 35%, transparent);
+
+  --animate-fade-in: fade-in 220ms ease-out both;
+  --animate-rise: rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  --animate-slide-in: slide-in 280ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0.4;
+    transform: translateX(24px);
+  }
+}
+
+:root {
+  --canvas: #f3ede2;
+  --surface: #faf6ee;
+  --ink: #3d342b;
+  --muted: #8b7f71;
+  --accent: #b5694a;
+  --paper: #f8f1e3;
+  --on-accent: #faf6ee;
+  --ui-font: 'Nunito Variable', system-ui, sans-serif;
+  --radius-unit: 0.75rem;
+  --tint-strength: 0.7;
+
+  --hl-sun: #f6d365;
+  --hl-leaf: #b5d99c;
+  --hl-sky: #a7cbef;
+  --hl-rose: #f2afbd;
+  --hl-lilac: #cfb8ef;
+  --hl-opacity: 0.55;
+  --hl-blend: multiply;
+}
+
+:root[data-dark='true'] {
+  --hl-sun: #d9b54a;
+  --hl-leaf: #84b46a;
+  --hl-sky: #6f9fd6;
+  --hl-rose: #d27d90;
+  --hl-lilac: #a487d6;
+  --hl-opacity: 0.38;
+  --hl-blend: normal;
+}
+
+html,
+body {
+  background: var(--canvas);
+  color: var(--ink);
+}
+
+body {
+  margin: 0;
+  font-family: var(--ui-font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
+}
+
+#root {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
+}
+
+:where(button, a, [role='switch']):focus-visible {
+  outline: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, var(--ink) 20%, transparent) transparent;
+}
+
+input[type='range'] {
+  accent-color: var(--accent);
+}
+
+/* A whisper of paper grain over the whole app. */
+:root[data-grain='true'] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  opacity: 0.06;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+:root[data-grain='true'][data-dark='true'] body::after {
+  mix-blend-mode: screen;
+  opacity: 0.035;
+  filter: invert(1);
+}
+
+:root[data-reduce-motion='true'] *,
+:root[data-reduce-motion='true'] *::before,
+:root[data-reduce-motion='true'] *::after {
+  animation: none !important;
+  transition: none !important;
+  scroll-behavior: auto !important;
+}
+
+/* ---------- PDF pages ---------- */
+
+.pdf-page {
+  position: relative;
+  isolation: isolate;
+  background: white;
+}
+
+.pdf-page .react-pdf__Page {
+  background-color: transparent !important;
+}
+
+.pdf-page .react-pdf__Page__canvas {
+  display: block;
+}
+
+.page-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.page-tint {
+  background: var(--paper);
+  mix-blend-mode: multiply;
+  opacity: var(--tint-strength);
+}
+
+[data-page-mode='tint'] .pdf-page,
+[data-page-mode='night'] .pdf-page {
+  background: var(--paper);
+}
+
+[data-page-mode='night'] .react-pdf__Page__canvas {
+  filter: invert(1) hue-rotate(180deg);
+}
+
+/* Inverted page: black → paper, white → ink. */
+.page-night-ink {
+  background: var(--ink);
+  mix-blend-mode: multiply;
+  opacity: max(var(--tint-strength), 0.35);
+}
+
+.page-night-paper {
+  background: var(--paper);
+  mix-blend-mode: screen;
+  opacity: var(--tint-strength);
+}
+
+.highlight-layer {
+  mix-blend-mode: var(--hl-blend);
+}
+
+.highlight-rect {
+  position: absolute;
+  border-radius: 2px;
+  opacity: var(--hl-opacity);
+}
+
+.highlight-rect[data-color='sun'] { background: var(--hl-sun); }
+.highlight-rect[data-color='leaf'] { background: var(--hl-leaf); }
+.highlight-rect[data-color='sky'] { background: var(--hl-sky); }
+.highlight-rect[data-color='rose'] { background: var(--hl-rose); }
+.highlight-rect[data-color='lilac'] { background: var(--hl-lilac); }
+.highlight-rect[data-active='true'] {
+  opacity: calc(var(--hl-opacity) + 0.25);
+  box-shadow: 0 0 0 1.5px color-mix(in oklab, var(--ink) 40%, transparent);
+}
+
+.swatch[data-color='sun'] { background: var(--hl-sun); }
+.swatch[data-color='leaf'] { background: var(--hl-leaf); }
+.swatch[data-color='sky'] { background: var(--hl-sky); }
+.swatch[data-color='rose'] { background: var(--hl-rose); }
+.swatch[data-color='lilac'] { background: var(--hl-lilac); }
+
+.pdf-page .textLayer {
+  z-index: 2;
+}
+
+.pdf-page .textLayer ::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.pdf-page .textLayer mark {
+  color: transparent;
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+.pdf-page .annotationLayer .linkAnnotation:hover,
+.pdf-page .annotationLayer .linkAnnotation > a:hover {
+  backdrop-filter: none;
+  background: color-mix(in oklab, var(--accent) 18%, transparent);
+  border-radius: 2px;
+}
+
+/* Book covers get a little spine shading. */
+.book-cover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(
+    90deg,
+    rgb(0 0 0 / 0.16) 0%,
+    rgb(255 255 255 / 0.12) 2.5%,
+    rgb(0 0 0 / 0.05) 5%,
+    transparent 9%,
+    transparent 94%,
+    rgb(0 0 0 / 0.06) 100%
+  );
+}
