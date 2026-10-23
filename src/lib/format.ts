@@ -43,3 +43,25 @@ export function escapeHtml(text: string) {
 export function escapeRegExp(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
+
+const SMALL_WORDS = new Set('a an and as at but by for from in into nor of on or over per the to via vs with'.split(' '))
+const ROMAN = /^(?=[MDCLXVI])M*(C[MD]|D?C{0,3})(X[CL]|L?X{0,3})(I[XV]|V?I{0,3})$/
+
+/** Headings set in capitals ("CHAPTER IV. THE WAR OF THE WORLDS") read more calmly in title case. */
+export function tidyHeading(title: string) {
+  const letters = title.match(/\p{L}/gu) ?? []
+  const upper = letters.filter((c) => c !== c.toLowerCase()).length
+  if (letters.length < 4 || upper < letters.length * 0.6 || /^\p{L}{1,3}$/u.test(title.trim())) return title
+  let first = true
+  return title.replace(/[\p{L}\p{N}'’]+/gu, (word, offset: number) => {
+    const before = title.slice(0, offset)
+    const startsPhrase = first || /([:.!?—–-]|\d)\s*$/.test(before)
+    first = false
+    if (word !== word.toUpperCase() || ROMAN.test(word)) return word
+    // The letter in "Appendix A" or "Part B" is a label, not the article.
+    if (word.length === 1 && /(appendix|part|section|chapter|unit|figure|table)\s*$/i.test(before)) return word
+    const lower = word.toLowerCase()
+    if (!startsPhrase && SMALL_WORDS.has(lower)) return lower
+    return lower.replace(/\p{L}/u, (c) => c.toUpperCase())
+  })
+}

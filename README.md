@@ -26,8 +26,8 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 - Your **place is remembered** in every book, along with its zoom level.
 - **Page thumbnails** in the sidebar for skimming, marked with bookmarks and annotation counts.
 - **Table of contents** from the PDF outline: a collapsible tree that follows the current chapter, with _Show all_ / _Collapse all_ and a filter for long outlines.
-- **Automatic contents** for PDFs that don't have any. Headings are found from type size and patterns like _Chapter 3_, _Lecture 4: …_ or _2.1 Methods_, and running headers are skipped. This works on scanned pages too, once their text has been recognised.
-- **Rotate** the whole view (<kbd>R</kbd> / <kbd>Shift R</kbd>) or a single page with the button in its corner. Annotations and recognised text turn with the page.
+- **Automatic contents** for PDFs that don't have any. Headings are found from type size and patterns like _Chapter 3_, _Lecture 4: …_ or _2.1 Methods_, and running headers are skipped. Titles set in capitals are shown in title case. This works on scanned pages too, once their text has been recognised.
+- **Rotate** the whole view (<kbd>R</kbd> / <kbd>Shift R</kbd>) or a single page from the View menu or its thumbnail. Annotations and recognised text turn with the page.
 - **Full-text search** with in-page match marks.
 - **Text recognition (OCR)** for scans, photographed pages and lecture slides that are only images. Library notices when a PDF has no text and reads it in the background, starting from the page you're on. Afterwards you can select, highlight and search the text like any other PDF. Sideways pages are detected and turned upright. Recognition runs entirely on your device with a bundled English model ([Tesseract](https://github.com/naptha/tesseract.js)). It handles printed and typed text well; handwriting is hit-and-miss. Start, pause or redo it from a book's details.
 - **Focus mode** hides everything except the page.

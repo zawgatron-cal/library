@@ -4,7 +4,7 @@ import { Bookmark, BookmarkPlus, ChevronRight, RefreshCw, Sparkles, ChevronsDown
 import { HIGHLIGHT_COLORS, deleteHighlight, updateBook, type Book, type Highlight, type HighlightColor, type OcrPage, type OutlineEntry } from '../../lib/db'
 import { generateOutline } from '../../lib/autoToc'
 import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
-import { escapeRegExp } from '../../lib/format'
+import { escapeRegExp, tidyHeading } from '../../lib/format'
 import { IconButton, inputClass } from '../ui/primitives'
 import type { PageSize } from './layout'
 import { PagesPanel } from './PagesPanel'
@@ -97,7 +97,7 @@ async function resolveOutline(pdf: PDFDocumentProxy, items: RawOutline, prefix =
       } catch {
         page = null
       }
-      return { id, title: item.title, page, children: await resolveOutline(pdf, item.items, id) }
+      return { id, title: tidyHeading(item.title), page, children: await resolveOutline(pdf, item.items, id) }
     }),
   )
 }
@@ -117,7 +117,7 @@ function fromEntries(entries: OutlineEntry[]): OutlineNode[] {
     stack.length = Math.min(stack.length, e.level)
     const siblings = stack.length ? stack[stack.length - 1].children : root
     const id = [...stack.map((n) => n.id.split('.').at(-1)), siblings.length].join('.')
-    const node: OutlineNode = { id, title: e.title, page: e.page, children: [] }
+    const node: OutlineNode = { id, title: tidyHeading(e.title), page: e.page, children: [] }
     siblings.push(node)
     stack.push(node)
   }

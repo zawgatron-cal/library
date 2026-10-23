@@ -361,7 +361,7 @@ input[type='range'] {
   box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent);
 }
 
-/* Turn a single page, from a button that appears in the page's top-left corner on hover. */
+/* Turn a single page, from a button that appears in a thumbnail's top-left corner on hover. */
 .page-rotate {
   position: absolute;
   top: 10px;
@@ -385,11 +385,7 @@ input[type='range'] {
   height: 14px;
 }
 
-.pdf-page:hover .page-rotate {
-  opacity: 0.55;
-}
-
-.pdf-page .page-rotate:hover,
+.page-rotate:hover,
 .page-rotate:focus-visible {
   opacity: 1;
 }

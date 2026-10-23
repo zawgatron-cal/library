@@ -3,7 +3,6 @@ import { Page } from 'react-pdf'
 import type { Highlight, OcrPage, ReadingPosition, Rect } from '../../lib/db'
 import { rotateRect, unrotateRect } from '../../lib/geometry'
 import { escapeHtml, escapeRegExp } from '../../lib/format'
-import { RotateCw } from 'lucide-react'
 import { OcrLayer } from './OcrLayer'
 import type { PageLayout, ScrollDirection } from '../../lib/preferences'
 import type { PageMode } from '../../lib/themes'
@@ -123,14 +122,13 @@ type Props = {
   onHighlightClick: (highlight: Highlight, anchor: { x: number; y: number }) => void
   onHighlightHover: (id: string | null) => void
   onToggleBookmark: (page: number) => void
-  onRotatePage: (page: number) => void
   onPinchZoom: (factor: number) => void
   ref?: Ref<PageStackHandle>
 }
 
 export function PageStack(props: Props) {
   const { pageSizes, scale, layout, direction, margins, gap, pageMode, initialPosition, highlights, rotations, ocrPages, activeHighlightId, bookmarkedPages, searchQuery } = props
-  const { onScrollPosition, onResize, onSelection, onHighlightClick, onHighlightHover, onToggleBookmark, onRotatePage, onPinchZoom, ref } = props
+  const { onScrollPosition, onResize, onSelection, onHighlightClick, onHighlightHover, onToggleBookmark, onPinchZoom, ref } = props
   const vertical = direction === 'vertical'
   const paged = layout !== 'continuous'
 
@@ -360,7 +358,7 @@ export function PageStack(props: Props) {
   const handleMouseUp = (e: React.MouseEvent) => {
     const container = scrollEl.current
     if (!container || e.button !== 0) return
-    if ((e.target as HTMLElement).closest('[data-margin], [data-ribbon], [data-page-tool]')) return
+    if ((e.target as HTMLElement).closest('[data-margin], [data-ribbon]')) return
     const selection = readSelection(container)
     if (selection) {
       const parts = selection.parts.map((part) => ({ ...part, rects: part.rects.map((r) => unrotateRect(r, rotations[part.page - 1] ?? 0)) }))
@@ -442,7 +440,6 @@ export function PageStack(props: Props) {
                       searchQuery={searchQuery}
                       bookmarked={bookmarkedPages.has(p)}
                       onToggleBookmark={onToggleBookmark}
-                      onRotate={onRotatePage}
                     />
                     {side === 'right' && column}
                   </div>
@@ -471,7 +468,6 @@ const PdfPage = memo(function PdfPage({
   searchQuery,
   bookmarked,
   onToggleBookmark,
-  onRotate,
 }: {
   pageNumber: number
   size: PageSize
@@ -487,7 +483,6 @@ const PdfPage = memo(function PdfPage({
   searchQuery: string
   bookmarked: boolean
   onToggleBookmark: (page: number) => void
-  onRotate: (page: number) => void
 }) {
   const turned = extraRotation % 180 !== 0
   // The page on screen stays at its last crisp render (stretched to the new size) until the next render finishes,
@@ -557,16 +552,6 @@ const PdfPage = memo(function PdfPage({
           query={searchQuery}
         />
       )}
-      <button
-        type="button"
-        data-page-tool
-        className="page-rotate"
-        aria-label={`Rotate page ${pageNumber}`}
-        title="Rotate this page"
-        onClick={() => onRotate(pageNumber)}
-      >
-        <RotateCw />
-      </button>
       <button
         type="button"
         data-ribbon

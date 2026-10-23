@@ -103,7 +103,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         <Wordmark />
         <div className="relative mx-auto hidden w-full max-w-sm md:block">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-          <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your shelves" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
           {importing > 0 && <span className="mr-2 animate-pulse text-xs font-semibold text-muted">Adding {importing}…</span>}
@@ -136,7 +136,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
               <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center gap-2 bg-canvas/85 px-2 py-3 backdrop-blur-md">
                 <div className="relative w-full md:hidden">
                   <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-                  <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your shelves" value={query} onChange={(e) => setQuery(e.target.value)} />
+                  <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
                 {FILTERS.map((f) => (
                   <Chip key={f.value} active={activeFilter === f.value} onClick={() => setFilter(f.value)}>

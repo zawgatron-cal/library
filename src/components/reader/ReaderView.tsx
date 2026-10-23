@@ -643,7 +643,6 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
                   onHighlightClick={onHighlightClick}
                   onHighlightHover={setHoverHighlightId}
                   onToggleBookmark={toggleBookmark}
-                  onRotatePage={rotatePage}
                   onPinchZoom={onPinchZoom}
                 />
               </div>
