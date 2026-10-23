@@ -1,7 +1,10 @@
 import { memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type Ref } from 'react'
 import { Page } from 'react-pdf'
-import type { Highlight, ReadingPosition, Rect } from '../../lib/db'
+import type { Highlight, OcrPage, ReadingPosition, Rect } from '../../lib/db'
+import { rotateRect, unrotateRect } from '../../lib/geometry'
 import { escapeHtml, escapeRegExp } from '../../lib/format'
+import { RotateCw } from 'lucide-react'
+import { OcrLayer } from './OcrLayer'
 import type { PageLayout, ScrollDirection } from '../../lib/preferences'
 import type { PageMode } from '../../lib/themes'
 import { screenReady } from '../../lib/router'
@@ -108,6 +111,9 @@ type Props = {
   pageMode: PageMode
   initialPosition: ReadingPosition | null
   highlights: Highlight[]
+  /** Extra clockwise rotation the reader applies to each page (index = page - 1). */
+  rotations: number[]
+  ocrPages: ReadonlyMap<number, OcrPage>
   activeHighlightId: string | null
   bookmarkedPages: Set<number>
   searchQuery: string
@@ -117,13 +123,14 @@ type Props = {
   onHighlightClick: (highlight: Highlight, anchor: { x: number; y: number }) => void
   onHighlightHover: (id: string | null) => void
   onToggleBookmark: (page: number) => void
+  onRotatePage: (page: number) => void
   onPinchZoom: (factor: number) => void
   ref?: Ref<PageStackHandle>
 }
 
 export function PageStack(props: Props) {
-  const { pageSizes, scale, layout, direction, margins, gap, pageMode, initialPosition, highlights, activeHighlightId, bookmarkedPages, searchQuery } = props
-  const { onScrollPosition, onResize, onSelection, onHighlightClick, onHighlightHover, onToggleBookmark, onPinchZoom, ref } = props
+  const { pageSizes, scale, layout, direction, margins, gap, pageMode, initialPosition, highlights, rotations, ocrPages, activeHighlightId, bookmarkedPages, searchQuery } = props
+  const { onScrollPosition, onResize, onSelection, onHighlightClick, onHighlightHover, onToggleBookmark, onRotatePage, onPinchZoom, ref } = props
   const vertical = direction === 'vertical'
   const paged = layout !== 'continuous'
 
@@ -143,14 +150,22 @@ export function PageStack(props: Props) {
     return map
   }, [cells])
 
+  // Highlights are stored against the unrotated page; these are turned to match the page as shown.
   const highlightsByPage = useMemo(() => {
     const map = new Map<number, Highlight[]>()
     for (const h of highlights) {
+      const rotation = rotations[h.page - 1] ?? 0
+      const shown = rotation ? { ...h, rects: h.rects.map((r) => rotateRect(r, rotation)) } : h
       if (!map.has(h.page)) map.set(h.page, [])
-      map.get(h.page)!.push(h)
+      map.get(h.page)!.push(shown)
     }
     return map
-  }, [highlights])
+  }, [highlights, rotations])
+  const original = useMemo(() => new Map(highlights.map((h) => [h.id, h])), [highlights])
+  const openHighlight = useCallback(
+    (h: Highlight, at: { x: number; y: number }) => onHighlightClick(original.get(h.id) ?? h, at),
+    [original, onHighlightClick],
+  )
 
   const textRenderer = useMemo(() => {
     const q = searchQuery.trim()
@@ -345,10 +360,11 @@ export function PageStack(props: Props) {
   const handleMouseUp = (e: React.MouseEvent) => {
     const container = scrollEl.current
     if (!container || e.button !== 0) return
-    if ((e.target as HTMLElement).closest('[data-margin], [data-ribbon]')) return
+    if ((e.target as HTMLElement).closest('[data-margin], [data-ribbon], [data-page-tool]')) return
     const selection = readSelection(container)
     if (selection) {
-      onSelection(selection)
+      const parts = selection.parts.map((part) => ({ ...part, rects: part.rects.map((r) => unrotateRect(r, rotations[part.page - 1] ?? 0)) }))
+      onSelection({ ...selection, parts })
       return
     }
     onSelection(null)
@@ -362,7 +378,7 @@ export function PageStack(props: Props) {
     const hit = highlightsByPage
       .get(page)
       ?.find((h) => h.rects.some((r) => fx >= r.x - pad && fx <= r.x + r.w + pad && fy >= r.y - pad && fy <= r.y + r.h + pad))
-    if (hit) onHighlightClick(hit, { x: e.clientX, y: e.clientY + 8 })
+    if (hit) openHighlight(hit, { x: e.clientX, y: e.clientY + 8 })
   }
 
   const buffer = viewMain * 1.25
@@ -403,7 +419,7 @@ export function PageStack(props: Props) {
                     highlights={pageHighlights}
                     pageHeight={size.h * scale}
                     activeHighlightId={activeHighlightId}
-                    onOpen={onHighlightClick}
+                    onOpen={openHighlight}
                     onHover={onHighlightHover}
                   />
                 )
@@ -420,8 +436,13 @@ export function PageStack(props: Props) {
                       highlights={pageHighlights}
                       activeHighlightId={activeHighlightId}
                       textRenderer={textRenderer}
+                      rotate={((size.rotate ?? 0) + (rotations[p - 1] ?? 0)) % 360}
+                      extraRotation={rotations[p - 1] ?? 0}
+                      ocr={ocrPages.get(p)}
+                      searchQuery={searchQuery}
                       bookmarked={bookmarkedPages.has(p)}
                       onToggleBookmark={onToggleBookmark}
+                      onRotate={onRotatePage}
                     />
                     {side === 'right' && column}
                   </div>
@@ -444,8 +465,13 @@ const PdfPage = memo(function PdfPage({
   highlights,
   activeHighlightId,
   textRenderer,
+  rotate,
+  extraRotation,
+  ocr,
+  searchQuery,
   bookmarked,
   onToggleBookmark,
+  onRotate,
 }: {
   pageNumber: number
   size: PageSize
@@ -455,9 +481,15 @@ const PdfPage = memo(function PdfPage({
   highlights?: Highlight[]
   activeHighlightId: string | null
   textRenderer?: (item: { str: string }) => string
+  rotate: number
+  extraRotation: number
+  ocr?: OcrPage
+  searchQuery: string
   bookmarked: boolean
   onToggleBookmark: (page: number) => void
+  onRotate: (page: number) => void
 }) {
+  const turned = extraRotation % 180 !== 0
   // The page on screen stays at its last crisp render (stretched to the new size) until the next render finishes,
   // so zooming never flashes blank.
   const [shown, setShown] = useState(renderScale)
@@ -481,6 +513,7 @@ const PdfPage = memo(function PdfPage({
           <Page
             pageNumber={pageNumber}
             scale={layerScale}
+            rotate={rotate}
             loading={null}
             customTextRenderer={textRenderer}
             renderAnnotationLayer
@@ -515,6 +548,25 @@ const PdfPage = memo(function PdfPage({
           )}
         </div>
       )}
+      {ocr && (
+        <OcrLayer
+          ocr={ocr}
+          width={(turned ? size.h : size.w) * scale}
+          height={(turned ? size.w : size.h) * scale}
+          rotation={extraRotation}
+          query={searchQuery}
+        />
+      )}
+      <button
+        type="button"
+        data-page-tool
+        className="page-rotate"
+        aria-label={`Rotate page ${pageNumber}`}
+        title="Rotate this page"
+        onClick={() => onRotate(pageNumber)}
+      >
+        <RotateCw />
+      </button>
       <button
         type="button"
         data-ribbon

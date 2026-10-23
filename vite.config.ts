@@ -13,6 +13,10 @@ export default defineConfig({
       targets: [
         { src: 'node_modules/pdfjs-dist/cmaps/*', dest: 'pdfjs/cmaps', rename: { stripBase: true } },
         { src: 'node_modules/pdfjs-dist/standard_fonts/*', dest: 'pdfjs/standard_fonts', rename: { stripBase: true } },
+        // Text recognition: Tesseract's worker, its WebAssembly cores (the browser picks one) and the English model.
+        { src: 'node_modules/tesseract.js/dist/worker.min.js', dest: 'tesseract', rename: { stripBase: true } },
+        { src: 'node_modules/tesseract.js-core/tesseract-core*-lstm.wasm.js', dest: 'tesseract/core', rename: { stripBase: true } },
+        { src: 'node_modules/@tesseract.js-data/eng/4.0.0_best_int/eng.traineddata.gz', dest: 'tesseract/lang', rename: { stripBase: true } },
       ],
     }),
   ],

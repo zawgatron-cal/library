@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Document } from 'react-pdf'
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
-import { ArrowLeft, Bookmark, BookCheck, BookOpen, ChevronLeft, ChevronRight, CornerUpLeft, Keyboard, Maximize2, Minimize2, Minus, PanelLeft, PanelRight, Plus, Settings2, X } from 'lucide-react'
+import { ArrowLeft, Bookmark, BookCheck, BookOpen, ChevronLeft, ChevronRight, CornerUpLeft, Keyboard, Maximize2, Minimize2, Minus, Pause, PanelLeft, PanelRight, Plus, ScanText, Settings2, X } from 'lucide-react'
 import { getBookFile, newId, putHighlight, updateBook, type Book, type Highlight, type HighlightColor, type ReadingPosition } from '../../lib/db'
-import { useBook, useHighlights, useLocalStorage } from '../../lib/hooks'
-import '../../lib/pdf'
+import { useBook, useHighlights, useLocalStorage, useOcrPages, useOcrProgress } from '../../lib/hooks'
+import { extraRotation, normalizeRotation, rotateRect } from '../../lib/geometry'
+import { focusOcr, pauseOcr, queueOcr, type OcrProgress } from '../../lib/ocr'
+import { documentOptions, looksScanned } from '../../lib/pdf'
 import { navigate } from '../../lib/router'
 import { useSettings } from '../../lib/settings'
 import { bookProgress } from '../../lib/format'
@@ -19,11 +21,6 @@ import { clampZoom, fitScale, type PageSize } from './layout'
 import { PageStack, type PageStackHandle, type PendingSelection } from './PageStack'
 import { Sidebar, type SidebarTab } from './Sidebar'
 import { ViewMenu, ZoomControl } from './ViewControls'
-
-const documentOptions = {
-  cMapUrl: `${import.meta.env.BASE_URL}pdfjs/cmaps/`,
-  standardFontDataUrl: `${import.meta.env.BASE_URL}pdfjs/standard_fonts/`,
-}
 
 const SIDEBAR_TABS: SidebarTab[] = ['contents', 'pages', 'search', 'annotations', 'bookmarks', 'notes']
 
@@ -81,6 +78,11 @@ const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2
 /** PDF points → CSS pixels, so "100%" matches the printed size. */
 const PT_TO_PX = 96 / 72
 
+function viewportSize(page: PDFPageProxy) {
+  const vp = page.getViewport({ scale: 1 })
+  return { w: vp.width, h: vp.height }
+}
+
 function isTyping(target: EventTarget | null) {
   const el = target as HTMLElement | null
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
@@ -94,7 +96,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
   const searchInput = useRef<HTMLInputElement>(null)
 
   const [pdf, setPdf] = useState<PDFDocumentProxy | null>(null)
-  const [pageSizes, setPageSizes] = useState<PageSize[] | null>(null)
+  const [baseSizes, setBaseSizes] = useState<PageSize[] | null>(null)
   const [pageLabels, setPageLabels] = useState<string[] | null>(null)
   const [initialPosition] = useState<ReadingPosition | null>(book.position)
   const [currentPage, setCurrentPage] = useState(book.position?.page ?? 1)
@@ -109,7 +111,34 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
   const [dialog, setDialog] = useState<'help' | 'goto' | null>(null)
   const [history, setHistory] = useState<number[]>([])
 
-  const pageCount = pageSizes?.length ?? book.pageCount
+  const pageCount = baseSizes?.length ?? book.pageCount
+  const ocrPages = useOcrPages(book.id)
+  const ocrProgress = useOcrProgress(book.id)
+
+  /* ----- rotation ----- */
+
+  const rotations = useMemo(
+    () => Array.from({ length: pageCount }, (_, i) => extraRotation({ rotation: book.rotation, pageRotations: book.pageRotations }, i + 1)),
+    [pageCount, book.rotation, book.pageRotations],
+  )
+  /** Page sizes as shown, with sideways pages' width and height swapped. */
+  const pageSizes = useMemo(() => baseSizes?.map((s, i) => (rotations[i] % 180 ? { ...s, w: s.h, h: s.w } : s)) ?? null, [baseSizes, rotations])
+
+  const rotateView = useCallback((by: 90 | -90) => updateBook(book.id, (b) => ({ rotation: normalizeRotation((b.rotation ?? 0) + by) })), [book.id])
+  const rotatePage = useCallback(
+    (page: number) => {
+      updateBook(book.id, (b) => ({ pageRotations: { ...b.pageRotations, [page]: normalizeRotation((b.pageRotations?.[page] ?? 0) + 90) } }))
+      // Recognised text was read the old way up; read the page again the new way.
+      if (ocrPages.has(page)) queueOcr(book.id)
+    },
+    [book.id, ocrPages],
+  )
+  const resetRotation = useCallback(() => {
+    const reread = Object.keys(book.pageRotations ?? {}).some((p) => ocrPages.has(Number(p)))
+    updateBook(book.id, { rotation: 0, pageRotations: {} }).then(() => {
+      if (reread) queueOcr(book.id)
+    })
+  }, [book.id, book.pageRotations, ocrPages])
   const { pageLayout: layout, scrollDirection: direction, margins } = settings
   const sidebarTab = ui.sidebar && SIDEBAR_TABS.includes(ui.sidebar) ? ui.sidebar : ui.sidebar ? 'contents' : null
 
@@ -120,15 +149,16 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
       setPdf(doc)
       doc.getPageLabels().then(setPageLabels, () => setPageLabels(null))
       // Lay out with the first page's size straight away (most books are uniform), then correct any odd pages.
-      const first = (await doc.getPage(1)).getViewport({ scale: 1 })
-      setPageSizes(Array.from({ length: doc.numPages }, () => ({ w: first.width, h: first.height })))
+      const firstPage = await doc.getPage(1)
+      const first = { ...viewportSize(firstPage), rotate: firstPage.rotate }
+      setBaseSizes(Array.from({ length: doc.numPages }, () => first))
       const sizes = await Promise.all(
         Array.from({ length: doc.numPages }, async (_, i) => {
-          const vp = (await doc.getPage(i + 1)).getViewport({ scale: 1 })
-          return { w: vp.width, h: vp.height }
+          const page = await doc.getPage(i + 1)
+          return { ...viewportSize(page), rotate: page.rotate }
         }),
       )
-      if (sizes.some((s) => s.w !== first.width || s.h !== first.height)) setPageSizes(sizes)
+      if (sizes.some((s) => s.w !== first.w || s.h !== first.h || s.rotate !== first.rotate)) setBaseSizes(sizes)
       if (doc.numPages !== book.pageCount) updateBook(book.id, { pageCount: doc.numPages })
     },
     [book.id, book.pageCount],
@@ -137,6 +167,21 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
   useEffect(() => {
     updateBook(book.id, { openedAt: Date.now() })
   }, [book.id])
+
+  /* ----- text recognition ----- */
+
+  useEffect(() => focusOcr(book.id, currentPage), [book.id, currentPage])
+
+  // Offer to read the text of books that turn out to be scans (ones imported before this existed, mostly).
+  const [scanned, setScanned] = useState(false)
+  useEffect(() => {
+    if (!pdf || book.ocr != null) return
+    let cancelled = false
+    looksScanned(pdf).then((s) => !cancelled && setScanned(s))
+    return () => {
+      cancelled = true
+    }
+  }, [pdf, book.ocr])
 
   /* ----- zoom ----- */
 
@@ -272,9 +317,9 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     (page: number, highlightId?: string) => {
       const h = highlightId ? highlights.find((x) => x.id === highlightId) : undefined
       setActiveHighlightId(highlightId ?? null)
-      jump(page, h ? { offset: h.rects[0]?.y ?? 0 } : undefined)
+      jump(page, h?.rects[0] ? { offset: rotateRect(h.rects[0], rotations[page - 1] ?? 0).y } : undefined)
     },
-    [highlights, jump],
+    [highlights, jump, rotations],
   )
 
   /* ----- layout ----- */
@@ -350,6 +395,12 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
         case 'm':
           setLayout({ margins: !margins })
           break
+        case 'r':
+          rotateView(90)
+          break
+        case 'R':
+          rotateView(-90)
+          break
         case 't':
         case '[':
           setUi((u) => ({ ...u, sidebar: u.sidebar ? null : 'contents' }))
@@ -389,7 +440,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, focus, dialog, goBack])
+  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, focus, dialog, goBack, rotateView])
 
   /* ----- focus-mode chrome ----- */
 
@@ -464,7 +515,18 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
             <IconButton label="Zoom in (+)" onClick={() => stepZoom(1)}>
               <Plus />
             </IconButton>
-            <ViewMenu layout={layout} direction={direction} margins={margins} onChange={setLayout} />
+            <ViewMenu
+              layout={layout}
+              direction={direction}
+              margins={margins}
+              onChange={setLayout}
+              rotation={book.rotation ?? 0}
+              currentPage={currentPage}
+              pageRotated={Object.values(book.pageRotations ?? {}).some(Boolean)}
+              onRotateView={rotateView}
+              onRotatePage={rotatePage}
+              onResetRotation={resetRotation}
+            />
             <IconButton label="Margin notes (M)" active={margins} onClick={() => setLayout({ margins: !margins })}>
               <PanelRight />
             </IconButton>
@@ -514,6 +576,9 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
             activeHighlightId={activeHighlightId}
             pageSizes={pageSizes}
             pageLabels={pageLabels}
+            rotations={rotations}
+            ocrPages={ocrPages}
+            onRotatePage={rotatePage}
             searchInputRef={searchInput}
           />
         )}
@@ -545,6 +610,8 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
                   pageMode={pageMode}
                   initialPosition={initialPosition}
                   highlights={highlights}
+                  rotations={rotations}
+                  ocrPages={ocrPages}
                   activeHighlightId={hoverHighlightId ?? activeHighlightId}
                   bookmarkedPages={bookmarkedPages}
                   searchQuery={searchQuery}
@@ -554,6 +621,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
                   onHighlightClick={onHighlightClick}
                   onHighlightHover={setHoverHighlightId}
                   onToggleBookmark={toggleBookmark}
+                  onRotatePage={rotatePage}
                   onPinchZoom={onPinchZoom}
                 />
               </div>
@@ -562,6 +630,25 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
             )}
           </Document>
 
+          {!focus && book.ocr === 'queued' && (
+            <OcrPill progress={ocrProgress} onPause={() => pauseOcr(book.id).then(() => toast('Paused — resume from the book’s details'))} />
+          )}
+          {!focus && book.ocr == null && scanned && (
+            <div className="absolute bottom-5 left-5 z-20 flex max-w-sm animate-rise flex-col gap-2.5 rounded-xl border border-line bg-surface p-4 shadow-lifted">
+              <p className="flex items-center gap-2 font-display text-[0.95rem] font-medium">
+                <ScanText className="size-4 text-accent" /> This looks like a scan
+              </p>
+              <p className="text-xs leading-relaxed text-muted">Recognise its text to search, select and annotate it. It's read right here on your computer.</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="primary" onClick={() => queueOcr(book.id)}>
+                  Recognise text
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => pauseOcr(book.id)}>
+                  Not now
+                </Button>
+              </div>
+            </div>
+          )}
           {history.length > 0 && !focus && (
             <div className="absolute bottom-5 left-5 flex animate-rise items-center overflow-hidden rounded-full border border-line bg-surface/95 shadow-lifted backdrop-blur">
               <button type="button" onClick={goBack} className="flex items-center gap-2 py-2 pr-2 pl-3.5 text-xs font-bold hover:text-accent-strong" title="Go back (Backspace)">
@@ -653,5 +740,33 @@ function ShortcutsDialog({ onClose }: { onClose: () => void }) {
         ))}
       </ul>
     </Dialog>
+  )
+}
+
+function OcrPill({ progress, onPause }: { progress?: OcrProgress; onPause: () => void }) {
+  const fraction = progress?.total ? progress.done / progress.total : 0
+  return (
+    <div className="absolute bottom-5 left-5 z-20 flex w-60 animate-rise flex-col gap-2 rounded-xl border border-line bg-surface px-3.5 py-3 shadow-soft">
+      <div className="flex items-center gap-2 text-xs">
+        <ScanText className="size-3.5 shrink-0 animate-pulse text-accent" />
+        <span className="flex-1 font-semibold">
+          Recognising text
+          {progress?.total ? (
+            <span className="font-normal text-muted">
+              {' '}
+              · {progress.done} of {progress.total} pages
+            </span>
+          ) : (
+            <span className="font-normal text-muted"> · getting ready</span>
+          )}
+        </span>
+        <button type="button" onClick={onPause} className="rounded p-0.5 text-muted hover:text-ink" aria-label="Pause text recognition" title="Pause">
+          <Pause className="size-3.5" />
+        </button>
+      </div>
+      <div className="h-1 overflow-hidden rounded-full bg-line">
+        <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${Math.max(3, fraction * 100)}%` }} />
+      </div>
+    </div>
   )
 }

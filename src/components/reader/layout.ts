@@ -1,6 +1,7 @@
 import type { PageLayout, ScrollDirection } from '../../lib/preferences'
 
-export type PageSize = { w: number; h: number }
+/** A page's size in PDF points as displayed, plus the rotation the PDF itself gives it. */
+export type PageSize = { w: number; h: number; rotate?: number }
 
 export type Cell = { pages: number[]; start: number; size: number; contentW: number; contentH: number }
 

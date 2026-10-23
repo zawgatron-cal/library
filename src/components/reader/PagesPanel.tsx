@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { Page } from 'react-pdf'
-import { Columns2, Columns3 } from 'lucide-react'
+import { Columns2, Columns3, RotateCw } from 'lucide-react'
 import type { Book, Highlight } from '../../lib/db'
 import { useLocalStorage } from '../../lib/hooks'
 import { useSettings } from '../../lib/settings'
@@ -16,13 +16,15 @@ type Props = {
   currentPage: number
   pageSizes: PageSize[] | null
   pageLabels: string[] | null
+  rotations: number[]
   onJump: (page: number) => void
+  onRotatePage: (page: number) => void
 }
 
 const GAP = 14
 
 /** A grid of page thumbnails for skimming; only the ones near the visible part of the list are rendered. */
-export function PagesPanel({ pdf, book, highlights, currentPage, pageSizes, pageLabels, onJump }: Props) {
+export function PagesPanel({ pdf, book, highlights, currentPage, pageSizes, pageLabels, rotations, onJump, onRotatePage }: Props) {
   const { pageMode } = useSettings()
   const [prefs, setPrefs] = useLocalStorage('library:pages-panel', { columns: 2 })
   const columns = prefs.columns === 3 ? 3 : 2
@@ -102,6 +104,7 @@ export function PagesPanel({ pdf, book, highlights, currentPage, pageSizes, page
                 page={page}
                 width={tileW}
                 height={Math.round((tileW * size.h) / size.w)}
+                rotate={((size.rotate ?? 0) + (rotations[i] ?? 0)) % 360}
                 render={near.has(page)}
                 current={page === currentPage}
                 bookmarked={bookmarked.has(page)}
@@ -109,6 +112,7 @@ export function PagesPanel({ pdf, book, highlights, currentPage, pageSizes, page
                 label={pageLabels?.[i] ?? String(page)}
                 pageMode={pageMode}
                 onJump={onJump}
+                onRotate={onRotatePage}
               />
             )
           })}
@@ -128,7 +132,9 @@ const Thumb = memo(function Thumb({
   annotations,
   label,
   pageMode,
+  rotate,
   onJump,
+  onRotate,
 }: {
   pdf: PDFDocumentProxy | null
   page: number
@@ -140,18 +146,20 @@ const Thumb = memo(function Thumb({
   annotations: number
   label: string
   pageMode: PageMode
+  rotate: number
   onJump: (page: number) => void
+  onRotate: (page: number) => void
 }) {
   const [painted, setPainted] = useState(false)
   return (
-    <button
-      type="button"
-      data-thumb={page}
-      onClick={() => onJump(page)}
-      aria-label={`Page ${label}`}
-      aria-current={current ? 'page' : undefined}
-      className="group flex flex-col items-center gap-1.5 text-center"
-    >
+    <div data-thumb={page} className="group relative flex flex-col items-center gap-1.5 text-center">
+      <button
+        type="button"
+        onClick={() => onJump(page)}
+        aria-label={`Page ${label}`}
+        aria-current={current ? 'page' : undefined}
+        className="absolute inset-0 z-[5] rounded-[3px]"
+      />
       <div
         className={`pdf-page overflow-hidden rounded-[3px] shadow-soft transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-lifted ${
           current ? 'outline-2 outline-offset-2 outline-accent' : ''
@@ -163,6 +171,7 @@ const Thumb = memo(function Thumb({
             pdf={pdf}
             pageNumber={page}
             width={width}
+            rotate={rotate}
             loading={null}
             renderTextLayer={false}
             renderAnnotationLayer={false}
@@ -185,6 +194,9 @@ const Thumb = memo(function Thumb({
         )}
       </div>
       <span className={`text-[0.7rem] tabular-nums ${current ? 'font-semibold text-accent' : 'text-muted'}`}>{label}</span>
-    </button>
+      <button type="button" className="page-rotate thumb-rotate z-[6]" aria-label={`Rotate page ${label}`} title="Rotate this page" onClick={() => onRotate(page)}>
+        <RotateCw />
+      </button>
+    </div>
   )
 })

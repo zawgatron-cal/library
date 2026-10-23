@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { Bookmark, BookmarkPlus, ChevronRight, ChevronsDownUp, ChevronsUpDown, Download, GalleryVertical, Highlighter, ListTree, NotebookPen, Search, Trash2, X } from 'lucide-react'
-import { HIGHLIGHT_COLORS, deleteHighlight, updateBook, type Book, type Highlight, type HighlightColor } from '../../lib/db'
+import { HIGHLIGHT_COLORS, deleteHighlight, updateBook, type Book, type Highlight, type HighlightColor, type OcrPage } from '../../lib/db'
 import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
 import { escapeRegExp } from '../../lib/format'
 import { IconButton, inputClass } from '../ui/primitives'
@@ -33,6 +33,9 @@ type Props = {
   activeHighlightId: string | null
   pageSizes: PageSize[] | null
   pageLabels: string[] | null
+  rotations: number[]
+  ocrPages: ReadonlyMap<number, OcrPage>
+  onRotatePage: (page: number) => void
   searchInputRef: React.RefObject<HTMLInputElement | null>
 }
 
@@ -271,7 +274,7 @@ type SearchResult = { page: number; before: string; match: string; after: string
 
 const textCache = new WeakMap<PDFDocumentProxy, Map<number, string>>()
 
-async function pageText(pdf: PDFDocumentProxy, n: number) {
+async function pageText(pdf: PDFDocumentProxy, n: number, ocr?: OcrPage) {
   if (!textCache.has(pdf)) textCache.set(pdf, new Map())
   const cache = textCache.get(pdf)!
   if (!cache.has(n)) {
@@ -279,10 +282,12 @@ async function pageText(pdf: PDFDocumentProxy, n: number) {
     const text = content.items.map((item) => ('str' in item ? item.str + (item.hasEOL ? ' ' : '') : '')).join('')
     cache.set(n, text.replace(/\s+/g, ' '))
   }
-  return cache.get(n)!
+  const text = cache.get(n)!
+  // Scanned pages have no text of their own; use what was recognised in them.
+  return ocr && text.trim().length < 25 ? ocr.text.replace(/\s+/g, ' ') : text
 }
 
-function SearchPanel({ pdf, searchQuery, onSearch, onJump, currentPage, searchInputRef }: Props) {
+function SearchPanel({ pdf, ocrPages, searchQuery, onSearch, onJump, currentPage, searchInputRef }: Props) {
   const [input, setInput] = useState(searchQuery)
   const [found, setFound] = useState<{ query: string; results: SearchResult[]; progress: number } | null>(null)
   const q = searchQuery.trim()
@@ -297,7 +302,7 @@ function SearchPanel({ pdf, searchQuery, onSearch, onJump, currentPage, searchIn
     const matches: SearchResult[] = []
     ;(async () => {
       for (let n = 1; n <= pdf.numPages && !cancelled; n++) {
-        const text = await pageText(pdf, n)
+        const text = await pageText(pdf, n, ocrPages.get(n))
         for (const m of text.matchAll(pattern)) {
           const start = m.index ?? 0
           matches.push({
@@ -316,7 +321,7 @@ function SearchPanel({ pdf, searchQuery, onSearch, onJump, currentPage, searchIn
     return () => {
       cancelled = true
     }
-  }, [pdf, q])
+  }, [pdf, q, ocrPages])
 
   return (
     <div className="pb-6">

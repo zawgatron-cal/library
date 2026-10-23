@@ -1,10 +1,33 @@
-import type { PDFDocumentProxy } from 'pdfjs-dist'
+import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { pdfjs } from 'react-pdf'
 import { addBook, newId, type Book } from './db'
 
 pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 
 export { pdfjs }
+
+export const documentOptions = {
+  cMapUrl: `${import.meta.env.BASE_URL}pdfjs/cmaps/`,
+  standardFontDataUrl: `${import.meta.env.BASE_URL}pdfjs/standard_fonts/`,
+}
+
+/** Pages with fewer characters of real text than this are treated as images that need text recognition. */
+const MIN_TEXT = 25
+
+export async function pageHasText(page: PDFPageProxy) {
+  const content = await page.getTextContent()
+  let length = 0
+  for (const item of content.items) if ('str' in item) length += item.str.trim().length
+  return length >= MIN_TEXT
+}
+
+/** Whether most of the first few pages are images without a text layer, as in scans and photographed notes. */
+export async function looksScanned(pdf: PDFDocumentProxy) {
+  const sample = Math.min(pdf.numPages, 6)
+  let withoutText = 0
+  for (let n = 1; n <= sample; n++) if (!(await pageHasText(await pdf.getPage(n)).catch(() => true))) withoutText++
+  return withoutText > sample / 2
+}
 
 const COVER_WIDTH = 360
 
@@ -36,11 +59,12 @@ async function renderCover(pdf: PDFDocumentProxy) {
 
 export async function importPdf(file: File): Promise<Book> {
   const data = new Uint8Array(await file.arrayBuffer())
-  const pdf = await pdfjs.getDocument({ data }).promise
+  const pdf = await pdfjs.getDocument({ data, ...documentOptions }).promise
   try {
     const meta = await pdf.getMetadata().catch(() => null)
     const info = (meta?.info ?? {}) as Record<string, unknown>
     const cover = await renderCover(pdf).catch(() => null)
+    const scanned = await looksScanned(pdf).catch(() => false)
 
     const book: Book = {
       id: newId(),
@@ -61,6 +85,7 @@ export async function importPdf(file: File): Promise<Book> {
       readingSeconds: 0,
       bookmarks: [],
       notes: '',
+      ocr: scanned ? 'queued' : null,
     }
     await addBook(book, new Blob([file], { type: 'application/pdf' }))
     return book

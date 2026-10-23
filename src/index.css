@@ -331,6 +331,85 @@ input[type='range'] {
   opacity: 0.85 !important;
 }
 
+/* Recognised words from scanned pages: invisible, but selectable and searchable. */
+.ocr-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  transform-origin: 0 0;
+  font-family: sans-serif;
+  line-height: 1;
+  color: transparent;
+  cursor: text;
+}
+
+.ocr-layer span {
+  position: absolute;
+  white-space: pre;
+  transform-origin: 0 0;
+}
+
+.ocr-layer ::selection {
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
+}
+
+.ocr-layer mark {
+  color: transparent;
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent);
+}
+
+/* Turn a single page, from a button that appears in the page's top-left corner on hover. */
+.page-rotate {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--ink);
+  background: color-mix(in oklab, var(--surface) 88%, transparent);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.14);
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+
+.page-rotate svg {
+  width: 14px;
+  height: 14px;
+}
+
+.pdf-page:hover .page-rotate {
+  opacity: 0.55;
+}
+
+.pdf-page .page-rotate:hover,
+.page-rotate:focus-visible {
+  opacity: 1;
+}
+
+.page-rotate.thumb-rotate {
+  top: 5px;
+  left: 5px;
+  width: 22px;
+  height: 22px;
+}
+
+.page-rotate.thumb-rotate svg {
+  width: 12px;
+  height: 12px;
+}
+
+.group:hover > .page-rotate.thumb-rotate {
+  opacity: 0.7;
+}
+
 .bookmark-ribbon.thumb-ribbon {
   top: -1px;
   right: 8px;

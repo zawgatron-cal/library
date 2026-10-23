@@ -1,8 +1,11 @@
-import { ArrowDownUp, ArrowLeftRight, BookOpen, File, PanelRight, Rows3 } from 'lucide-react'
+import { ArrowDownUp, ArrowLeftRight, BookOpen, File, PanelRight, RotateCcw, RotateCw, Rows3 } from 'lucide-react'
 import type { PageLayout, ScrollDirection } from '../../lib/preferences'
 import { Popover } from '../ui/Menu'
 import { IconButton, Toggle } from '../ui/primitives'
 import { clampZoom } from './layout'
+
+const rotateButton =
+  'flex flex-1 items-center justify-center gap-1.5 rounded-md border border-line px-2 py-1.5 text-xs font-semibold whitespace-nowrap transition hover:bg-hover [&_svg]:size-3.5'
 
 const ZOOM_PRESETS = [0.75, 1, 1.25, 1.5, 2]
 
@@ -88,11 +91,24 @@ export function ViewMenu({
   direction,
   margins,
   onChange,
+  rotation,
+  currentPage,
+  pageRotated,
+  onRotateView,
+  onRotatePage,
+  onResetRotation,
 }: {
   layout: PageLayout
   direction: ScrollDirection
   margins: boolean
   onChange: (patch: { pageLayout?: PageLayout; scrollDirection?: ScrollDirection; margins?: boolean }) => void
+  rotation: number
+  currentPage: number
+  /** Whether any page has been turned on its own. */
+  pageRotated: boolean
+  onRotateView: (by: 90 | -90) => void
+  onRotatePage: (page: number) => void
+  onResetRotation: () => void
 }) {
   return (
     <Popover
@@ -126,11 +142,32 @@ export function ViewMenu({
           ]}
         />
       </div>
+      <div>
+        <p className="mb-1.5 flex items-baseline justify-between text-xs font-bold tracking-wide text-muted uppercase">
+          Rotate {rotation ? <span className="tracking-normal normal-case">{rotation}°</span> : null}
+        </p>
+        <div className="flex gap-1.5">
+          <button type="button" onClick={() => onRotateView(-90)} className={rotateButton} title="Rotate every page left (Shift+R)">
+            <RotateCcw /> All left
+          </button>
+          <button type="button" onClick={() => onRotateView(90)} className={rotateButton} title="Rotate every page right (R)">
+            <RotateCw /> All right
+          </button>
+          <button type="button" onClick={() => onRotatePage(currentPage)} className={rotateButton} title="Rotate just this page">
+            <RotateCw /> Page {currentPage}
+          </button>
+        </div>
+        {(rotation !== 0 || pageRotated) && (
+          <button type="button" onClick={onResetRotation} className="mt-1.5 text-xs font-semibold text-accent-strong hover:underline">
+            Straighten everything
+          </button>
+        )}
+      </div>
       <div className="border-t border-line pt-3">
         <Toggle label="Margin notes" hint="Show annotations beside each page." checked={margins} onChange={(m) => onChange({ margins: m })} />
       </div>
       <p className="flex items-center gap-1.5 text-[0.7rem] text-muted">
-        <PanelRight className="size-3" /> Shortcuts: D two pages · V direction · M margins
+        <PanelRight className="size-3" /> Shortcuts: D two pages · V direction · M margins · R rotate
       </p>
     </Popover>
   )
