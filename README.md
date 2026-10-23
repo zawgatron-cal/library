@@ -12,8 +12,9 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 - **Stored locally** in your browser's IndexedDB. Nothing is uploaded anywhere, and it all works offline.
 - **Where you left off**: the book you were last reading, with the last thing you annotated in it.
 - **Book details**: right-click any book (or use its menu) to edit its title, author and shelves, mark it finished or favourite, and see pages, time spent reading, annotations and bookmarks.
+- **Archive** a book with one click to take it off your shelves without deleting anything; an _Archived_ filter brings it back.
 - Reading progress on every cover, filters for _Reading_, _Up next_, _Finished_ and _Favourites_, **shelves (tags)**, search, and sorting by recently read, recently added, title, author or progress.
-- Opening a book lifts its cover into the reader, and closing it settles back onto the shelf.
+- Opening a book grows its cover into the page you left off on, and closing it shrinks the page back onto the shelf.
 
 ### Reading
 
@@ -23,6 +24,7 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 - **Smooth zoom**: pinch or <kbd>Ctrl/⌘</kbd>+scroll to zoom around your cursor, or use the zoom slider. Pages stay sharp while they re-render.
 - **Go to page** by printed page number (like _xii_), PDF page, or percentage, with a **Back** pill to return after any jump.
 - Your **place is remembered** in every book, along with its zoom level.
+- **Page thumbnails** in the sidebar for skimming, marked with bookmarks and annotation counts.
 - **Table of contents** from the PDF outline: a collapsible tree that follows the current chapter, with _Show all_ / _Collapse all_ and a filter for long outlines.
 - **Full-text search** with in-page match marks.
 - **Focus mode** hides everything except the page.
@@ -76,6 +78,7 @@ Then open http://localhost:5173 and drop in a PDF.
 | <kbd>H</kbd>             | Highlight selection    |
 | <kbd>/</kbd> or <kbd>Ctrl/⌘ F</kbd> | Search in book |
 | <kbd>T</kbd>             | Toggle sidebar         |
+| <kbd>P</kbd>             | Page thumbnails        |
 | <kbd>F</kbd>             | Focus mode             |
 | <kbd>Esc</kbd>           | Close / exit focus     |
 
