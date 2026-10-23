@@ -25,7 +25,8 @@ function groupPages(count: number, layout: PageLayout) {
   return groups
 }
 
-const marginCount = (pages: number, margins: boolean) => (margins ? (pages === 2 ? 2 : 1) : 0)
+// Margins sit on both sides, even for a single page (one side empty), so the page itself stays centred.
+const marginsWidth = (margins: boolean) => (margins ? 2 * (MARGIN_W + MARGIN_GAP) : 0)
 
 /** Scale that fits a typical page (or spread) into the viewport for the given layout. */
 export function fitScale(sizes: PageSize[], { layout, direction, margins }: LayoutOptions, viewW: number, viewH: number) {
@@ -35,7 +36,7 @@ export function fitScale(sizes: PageSize[], { layout, direction, margins }: Layo
   const w = median(sample.map((s) => s.w))
   const h = median(sample.map((s) => s.h))
   const pages = layout === 'double' ? 2 : 1
-  const fixed = marginCount(pages, margins) * (MARGIN_W + MARGIN_GAP) + FACING_GAP * (pages - 1)
+  const fixed = marginsWidth(margins) + FACING_GAP * (pages - 1)
   const availW = viewW - PAD * 2 - fixed
   const availH = viewH - PAD * 2
   let scale: number
@@ -53,7 +54,7 @@ export function buildLayout(sizes: PageSize[], scale: number, opts: LayoutOption
   let maxCross = 0
   for (const pages of groupPages(sizes.length, opts.layout)) {
     const contentW =
-      pages.reduce((sum, p) => sum + sizes[p - 1].w * scale, 0) + FACING_GAP * (pages.length - 1) + marginCount(pages.length, opts.margins) * (MARGIN_W + MARGIN_GAP)
+      pages.reduce((sum, p) => sum + sizes[p - 1].w * scale, 0) + FACING_GAP * (pages.length - 1) + marginsWidth(opts.margins)
     const contentH = Math.max(...pages.map((p) => sizes[p - 1].h * scale))
     const main = vertical ? contentH : contentW
     const size = paged ? Math.max(viewMain, main + PAD * 2) : main

@@ -218,12 +218,14 @@ export function PageStack(props: Props) {
     setViewport((v) => ({ ...v, scroll: vertical ? el.scrollTop : el.scrollLeft }))
     report()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cells, crossTotal])
+  }, [cells, crossTotal, viewport.width, viewport.height])
 
   useEffect(() => {
     const el = scrollEl.current
     if (!el) return
     const observer = new ResizeObserver(() => {
+      // Keep whatever sat at the middle of the old viewport in the middle of the new one.
+      anchor.current = { ...anchor.current, viewMain: -1, viewCross: -1 }
       setViewport((v) => ({ ...v, height: el.clientHeight, width: el.clientWidth }))
       onResize(el.clientWidth, el.clientHeight)
     })
@@ -376,6 +378,7 @@ export function PageStack(props: Props) {
                 return (
                   <div key={p} className="flex items-start" style={{ gap: MARGIN_GAP }}>
                     {side === 'left' && column}
+                    {margins && cell.pages.length === 1 && <div aria-hidden style={{ width: MARGIN_W }} className="shrink-0" />}
                     <PdfPage
                       pageNumber={p}
                       size={size}
