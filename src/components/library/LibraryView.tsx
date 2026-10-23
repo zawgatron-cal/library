@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-react'
+import { Archive, ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-react'
 import type { Book } from '../../lib/db'
 import { useBooks, useHighlightCounts, useHighlights } from '../../lib/hooks'
 import { bookProgress, displayPage, formatRelative } from '../../lib/format'
@@ -13,7 +13,7 @@ import { openBook, screenReady } from '../../lib/router'
 import { BookDetailsSheet } from './BookDetails'
 import { DeleteBookDialog } from './DeleteBookDialog'
 
-type Filter = 'all' | 'reading' | 'unread' | 'finished' | 'favorites'
+type Filter = 'all' | 'reading' | 'unread' | 'finished' | 'favorites' | 'archived'
 type Sort = 'opened' | 'added' | 'title' | 'author' | 'progress'
 
 const FILTERS: { value: Filter; label: string }[] = [
@@ -24,7 +24,7 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: 'favorites', label: 'Favourites' },
 ]
 
-function statusOf(book: Book): Exclude<Filter, 'all' | 'favorites'> {
+function statusOf(book: Book): Exclude<Filter, 'all' | 'favorites' | 'archived'> {
   if (book.finishedAt) return 'finished'
   if (book.openedAt) return 'reading'
   return 'unread'
@@ -78,21 +78,24 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
   const addBooks = () => fileInput.current?.click()
   const allTags = useMemo(() => [...new Set((books ?? []).flatMap((b) => b.tags))].sort(), [books])
 
+  const shelved = useMemo(() => (books ?? []).filter((b) => !b.archivedAt), [books])
+  const archivedCount = (books?.length ?? 0) - shelved.length
+  // Leave the archive view once the last book in it is restored.
+  const activeFilter = filter === 'archived' && archivedCount === 0 ? 'all' : filter
+
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    return (books ?? [])
-      .filter((b) => filter === 'all' || (filter === 'favorites' ? b.favorite : statusOf(b) === filter))
+    const pool = activeFilter === 'archived' ? (books ?? []).filter((b) => b.archivedAt) : shelved
+    return pool
+      .filter((b) => activeFilter === 'all' || activeFilter === 'archived' || (activeFilter === 'favorites' ? b.favorite : statusOf(b) === activeFilter))
       .filter((b) => !tag || b.tags.includes(tag))
       .filter((b) => !q || `${b.title} ${b.author} ${b.tags.join(' ')} ${b.fileName}`.toLowerCase().includes(q))
       .sort(SORTERS[sort])
-  }, [books, query, filter, tag, sort])
+  }, [books, shelved, query, activeFilter, tag, sort])
 
-  const current = useMemo(
-    () => (books ?? []).filter((b) => b.openedAt && !b.finishedAt).sort((a, b) => b.openedAt! - a.openedAt!)[0],
-    [books],
-  )
+  const current = useMemo(() => shelved.filter((b) => b.openedAt && !b.finishedAt).sort((a, b) => b.openedAt! - a.openedAt!)[0], [shelved])
   const detailsBook = books?.find((b) => b.id === detailsId)
-  const filtered = filter !== 'all' || !!tag || !!query.trim()
+  const filtered = activeFilter !== 'all' || !!tag || !!query.trim()
 
   return (
     <div className="relative flex h-full animate-fade-in flex-col">
@@ -136,10 +139,16 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
                   <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your shelves" value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
                 {FILTERS.map((f) => (
-                  <Chip key={f.value} active={filter === f.value} onClick={() => setFilter(f.value)}>
+                  <Chip key={f.value} active={activeFilter === f.value} onClick={() => setFilter(f.value)}>
                     {f.label}
                   </Chip>
                 ))}
+                {archivedCount > 0 && (
+                  <Chip active={activeFilter === 'archived'} onClick={() => setFilter(activeFilter === 'archived' ? 'all' : 'archived')}>
+                    <Archive className="-mt-px mr-1 inline size-3" />
+                    Archived · {archivedCount}
+                  </Chip>
+                )}
                 {allTags.length > 0 && <span className="mx-1 h-5 w-px bg-line-strong" />}
                 {allTags.map((t) => (
                   <Chip key={t} active={tag === t} onClick={() => setTag(tag === t ? null : t)}>
@@ -147,7 +156,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
                   </Chip>
                 ))}
                 <span className="ml-auto text-xs text-muted">
-                  {visible.length} of {books.length}
+                  {visible.length} of {activeFilter === 'archived' ? archivedCount : shelved.length}
                 </span>
                 <select
                   value={sort}
@@ -185,6 +194,9 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
               </p>
             )}
             {books.length > 0 && filtered && visible.length === 0 && <p className="py-10 text-center text-muted">Nothing on this shelf.</p>}
+            {activeFilter === 'archived' && visible.length > 0 && (
+              <p className="mt-2 text-center text-sm text-muted">Archived books are kept, with all their annotations, but stay off your shelves until you bring them back.</p>
+            )}
           </div>
         )}
       </main>

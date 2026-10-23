@@ -55,6 +55,7 @@ export async function importPdf(file: File): Promise<Book> {
       openedAt: null,
       finishedAt: null,
       favorite: false,
+      archivedAt: null,
       position: null,
       zoom: 'fit',
       readingSeconds: 0,

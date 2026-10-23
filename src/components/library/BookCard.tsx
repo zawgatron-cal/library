@@ -1,10 +1,12 @@
-import { BookCheck, Download, Heart, Info, MoreHorizontal, Trash2 } from 'lucide-react'
+import { Archive, ArchiveRestore, BookCheck, Download, Heart, Info, MoreHorizontal, Trash2 } from 'lucide-react'
 import { listHighlights, updateBook, type Book } from '../../lib/db'
 import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
 import { bookProgress } from '../../lib/format'
 import { Menu } from '../ui/Menu'
 import { BookCover } from './BookCover'
 import { openBook } from '../../lib/router'
+import { useToast } from '../ui/toast'
+import { setArchived } from './archive'
 
 export function BookCard({
   book,
@@ -18,6 +20,9 @@ export function BookCard({
   onDelete: () => void
 }) {
   const progress = bookProgress(book)
+  const toast = useToast()
+  const archived = !!book.archivedAt
+  const toggleArchived = () => setArchived(book, !archived, toast)
 
   const exportNotes = async () => {
     const highlights = await listHighlights(book.id)
@@ -62,10 +67,20 @@ export function BookCard({
           >
             <Heart className={`size-3.5 ${book.favorite ? 'fill-accent text-accent' : ''}`} />
           </button>
+          <button
+            type="button"
+            aria-label={archived ? 'Unarchive' : 'Archive'}
+            title={archived ? 'Unarchive' : 'Archive'}
+            onClick={toggleArchived}
+            className="flex size-7.5 items-center justify-center rounded-full bg-surface/90 text-ink shadow-soft backdrop-blur hover:text-accent"
+          >
+            {archived ? <ArchiveRestore className="size-3.5" /> : <Archive className="size-3.5" />}
+          </button>
           <Menu
             items={[
               { label: 'Details', icon: <Info />, onSelect: onDetails },
               { label: 'Export notes', icon: <Download />, onSelect: exportNotes },
+              { label: archived ? 'Unarchive' : 'Archive', icon: archived ? <ArchiveRestore /> : <Archive />, onSelect: toggleArchived },
               { label: 'Remove', icon: <Trash2 />, onSelect: onDelete, danger: true },
             ]}
             trigger={({ onClick }) => (

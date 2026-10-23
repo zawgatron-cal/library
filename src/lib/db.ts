@@ -25,6 +25,8 @@ export type Book = {
   openedAt: number | null
   finishedAt: number | null
   favorite: boolean
+  /** Archived books stay in the database but are hidden from the shelves. Missing on books added before archiving existed. */
+  archivedAt?: number | null
   position: ReadingPosition | null
   zoom: number | 'fit'
   readingSeconds: number

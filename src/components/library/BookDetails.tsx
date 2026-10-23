@@ -5,6 +5,8 @@ import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
 import { bookProgress, formatBytes, formatDuration, formatRelative } from '../../lib/format'
 import { navigate } from '../../lib/router'
 import { Button, Field, Sheet, Toggle, inputClass } from '../ui/primitives'
+import { useToast } from '../ui/toast'
+import { setArchived } from './archive'
 import { BookCover } from './BookCover'
 
 export function BookDetailsSheet({ book, annotationCount, onClose, onDelete }: { book: Book; annotationCount: number; onClose: () => void; onDelete: () => void }) {
@@ -12,6 +14,7 @@ export function BookDetailsSheet({ book, annotationCount, onClose, onDelete }: {
   const [author, setAuthor] = useState(book.author)
   const [tags, setTags] = useState(book.tags.join(', '))
   const progress = bookProgress(book)
+  const toast = useToast()
 
   const saveText = () =>
     updateBook(book.id, {
@@ -67,6 +70,7 @@ export function BookDetailsSheet({ book, annotationCount, onClose, onDelete }: {
         </Field>
         <Toggle label="Favourite" checked={book.favorite} onChange={(favorite) => updateBook(book.id, { favorite })} />
         <Toggle label="Finished" checked={book.finishedAt !== null} onChange={(f) => updateBook(book.id, { finishedAt: f ? Date.now() : null })} />
+        <Toggle label="Archived" hint="Hidden from your shelves, nothing is deleted" checked={!!book.archivedAt} onChange={(a) => setArchived(book, a, toast)} />
       </div>
 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-line py-6 text-sm">
