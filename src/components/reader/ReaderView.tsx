@@ -25,7 +25,7 @@ const documentOptions = {
   standardFontDataUrl: `${import.meta.env.BASE_URL}pdfjs/standard_fonts/`,
 }
 
-const SIDEBAR_TABS: SidebarTab[] = ['contents', 'search', 'annotations', 'bookmarks', 'notes']
+const SIDEBAR_TABS: SidebarTab[] = ['contents', 'pages', 'search', 'annotations', 'bookmarks', 'notes']
 
 export function ReaderView({ bookId, onOpenSettings }: { bookId: string; onOpenSettings: () => void }) {
   const book = useBook(bookId)
@@ -320,7 +320,6 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           step(-1)
           break
         case 'k':
-        case 'p':
         case 'PageUp':
           e.preventDefault()
           step(-1)
@@ -360,6 +359,10 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           setFocus(false)
           openTab('search')
           requestAnimationFrame(() => searchInput.current?.focus())
+          break
+        case 'p':
+          setFocus(false)
+          setUi((u) => ({ ...u, sidebar: u.sidebar === 'pages' ? null : 'pages' }))
           break
         case 'g':
           e.preventDefault()
@@ -509,6 +512,8 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
             onSearch={setSearchQuery}
             onJump={jumpTo}
             activeHighlightId={activeHighlightId}
+            pageSizes={pageSizes}
+            pageLabels={pageLabels}
             searchInputRef={searchInput}
           />
         )}
@@ -627,6 +632,7 @@ const SHORTCUTS: [string[], string][] = [
   [['H'], 'Highlight selection'],
   [['/'], 'Search in book'],
   [['T'], 'Toggle sidebar'],
+  [['P'], 'Page thumbnails'],
   [['F'], 'Focus mode'],
   [['Esc'], 'Close / exit focus'],
 ]

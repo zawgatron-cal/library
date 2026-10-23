@@ -331,6 +331,14 @@ input[type='range'] {
   opacity: 0.85 !important;
 }
 
+.bookmark-ribbon.thumb-ribbon {
+  top: -1px;
+  right: 8px;
+  width: 9px;
+  height: 19px;
+  pointer-events: none;
+}
+
 .margin-note {
   transition:
     top 250ms cubic-bezier(0.2, 0.8, 0.2, 1),

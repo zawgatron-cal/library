@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import { Bookmark, BookmarkPlus, ChevronRight, ChevronsDownUp, ChevronsUpDown, Download, Highlighter, ListTree, NotebookPen, Search, Trash2, X } from 'lucide-react'
+import { Bookmark, BookmarkPlus, ChevronRight, ChevronsDownUp, ChevronsUpDown, Download, GalleryVertical, Highlighter, ListTree, NotebookPen, Search, Trash2, X } from 'lucide-react'
 import { HIGHLIGHT_COLORS, deleteHighlight, updateBook, type Book, type Highlight, type HighlightColor } from '../../lib/db'
 import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
 import { escapeRegExp } from '../../lib/format'
 import { IconButton, inputClass } from '../ui/primitives'
+import type { PageSize } from './layout'
+import { PagesPanel } from './PagesPanel'
 
-export type SidebarTab = 'contents' | 'search' | 'annotations' | 'bookmarks' | 'notes'
+export type SidebarTab = 'contents' | 'pages' | 'search' | 'annotations' | 'bookmarks' | 'notes'
 
 const TABS: { id: SidebarTab; label: string; icon: ReactNode }[] = [
   { id: 'contents', label: 'Contents', icon: <ListTree /> },
+  { id: 'pages', label: 'Pages (P)', icon: <GalleryVertical /> },
   { id: 'search', label: 'Search', icon: <Search /> },
   { id: 'annotations', label: 'Annotations', icon: <Highlighter /> },
   { id: 'bookmarks', label: 'Bookmarks', icon: <Bookmark /> },
@@ -28,6 +31,8 @@ type Props = {
   onSearch: (query: string) => void
   onJump: (page: number, highlightId?: string) => void
   activeHighlightId: string | null
+  pageSizes: PageSize[] | null
+  pageLabels: string[] | null
   searchInputRef: React.RefObject<HTMLInputElement | null>
 }
 
@@ -45,8 +50,9 @@ export function Sidebar(props: Props) {
           <X />
         </IconButton>
       </nav>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div data-sidebar-scroll className="min-h-0 flex-1 overflow-y-auto">
         {tab === 'contents' && <ContentsPanel {...props} />}
+        {tab === 'pages' && <PagesPanel {...props} />}
         {tab === 'search' && <SearchPanel {...props} />}
         {tab === 'annotations' && <AnnotationsPanel {...props} />}
         {tab === 'bookmarks' && <BookmarksPanel {...props} />}
