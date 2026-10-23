@@ -4,6 +4,7 @@ import type { Highlight, ReadingPosition, Rect } from '../../lib/db'
 import { escapeHtml, escapeRegExp } from '../../lib/format'
 import type { PageLayout, ScrollDirection } from '../../lib/preferences'
 import type { PageMode } from '../../lib/themes'
+import { screenReady } from '../../lib/router'
 import { FACING_GAP, MARGIN_GAP, MARGIN_W, PAD, READING_LINE, buildLayout, cellIndexAt, type Cell, type PageSize } from './layout'
 
 export type SelectionPart = { page: number; rects: Rect[] }
@@ -217,17 +218,24 @@ export function PageStack(props: Props) {
     scrollWithoutSnap(el, vertical ? { top: targetMain, left: targetCross, behavior: 'instant' } : { left: targetMain, top: targetCross, behavior: 'instant' })
     setViewport((v) => ({ ...v, scroll: vertical ? el.scrollTop : el.scrollLeft }))
     report()
+    // Let the pages at the new position mount before the opening transition takes its snapshot.
+    setTimeout(() => screenReady('reader'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cells, crossTotal, viewport.width, viewport.height])
 
-  useEffect(() => {
+  // Measured synchronously as well as observed: resize observers don't fire while a screen transition is preparing.
+  useLayoutEffect(() => {
     const el = scrollEl.current
     if (!el) return
+    const measureViewport = () => {
+      setViewport((v) => (v.width === el.clientWidth && v.height === el.clientHeight ? v : { ...v, height: el.clientHeight, width: el.clientWidth }))
+      onResize(el.clientWidth, el.clientHeight)
+    }
+    measureViewport()
     const observer = new ResizeObserver(() => {
       // Keep whatever sat at the middle of the old viewport in the middle of the new one.
       anchor.current = { ...anchor.current, viewMain: -1, viewCross: -1 }
-      setViewport((v) => ({ ...v, height: el.clientHeight, width: el.clientWidth }))
-      onResize(el.clientWidth, el.clientHeight)
+      measureViewport()
     })
     observer.observe(el)
     return () => observer.disconnect()
@@ -242,18 +250,22 @@ export function PageStack(props: Props) {
   useEffect(() => {
     const el = scrollEl.current
     if (!el) return
+    const zoomAround = (clientX: number, clientY: number, factor: number) => {
+      const { measure, onPinchZoom, vertical } = latest.current
+      const box = el.getBoundingClientRect()
+      const atMain = vertical ? clientY - box.top : clientX - box.left
+      const atCross = vertical ? clientX - box.left : clientY - box.top
+      const a = measure(atMain, atCross)
+      if (a) anchor.current = a
+      onPinchZoom(factor)
+    }
     const onWheel = (e: WheelEvent) => {
-      const { measure, onPinchZoom, vertical, paged, cells } = latest.current
+      const { vertical, paged, cells } = latest.current
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault()
-        const box = el.getBoundingClientRect()
-        const atMain = vertical ? e.clientY - box.top : e.clientX - box.left
-        const atCross = vertical ? e.clientX - box.left : e.clientY - box.top
-        const a = measure(atMain, atCross)
-        if (a) anchor.current = a
         // mouse wheels send ~100 per notch, trackpad pinches send small deltas
         const delta = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY
-        onPinchZoom(Math.exp(-Math.max(-50, Math.min(50, delta)) * 0.0025))
+        zoomAround(e.clientX, e.clientY, Math.exp(-Math.max(-50, Math.min(50, delta)) * 0.0025))
         return
       }
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return
@@ -279,8 +291,28 @@ export function PageStack(props: Props) {
       state.lockedUntil = Date.now() + 450
       scrollWithoutSnap(el, vertical ? { top: next.start, behavior: 'smooth' } : { left: next.start, behavior: 'smooth' })
     }
+    // Safari reports trackpad pinches as gesture events (with a cumulative scale) rather than ctrl+wheel.
+    type GestureEvent = UIEvent & { scale: number; clientX: number; clientY: number }
+    let gestureScale = 1
+    const onGestureStart = (e: Event) => {
+      e.preventDefault()
+      gestureScale = 1
+    }
+    const onGestureChange = (e: Event) => {
+      const g = e as GestureEvent
+      e.preventDefault()
+      if (!g.scale) return
+      zoomAround(g.clientX, g.clientY, g.scale / gestureScale)
+      gestureScale = g.scale
+    }
     el.addEventListener('wheel', onWheel, { passive: false })
-    return () => el.removeEventListener('wheel', onWheel)
+    el.addEventListener('gesturestart', onGestureStart)
+    el.addEventListener('gesturechange', onGestureChange)
+    return () => {
+      el.removeEventListener('wheel', onWheel)
+      el.removeEventListener('gesturestart', onGestureStart)
+      el.removeEventListener('gesturechange', onGestureChange)
+    }
   }, [])
 
   useImperativeHandle(
@@ -429,6 +461,7 @@ const PdfPage = memo(function PdfPage({
   // The page on screen stays at its last crisp render (stretched to the new size) until the next render finishes,
   // so zooming never flashes blank.
   const [shown, setShown] = useState(renderScale)
+  const [painted, setPainted] = useState(false)
   const layers = shown === renderScale ? [shown] : [shown, renderScale]
 
   return (
@@ -452,10 +485,14 @@ const PdfPage = memo(function PdfPage({
             customTextRenderer={textRenderer}
             renderAnnotationLayer
             renderTextLayer
-            onRenderSuccess={layerScale !== shown ? () => setShown(layerScale) : undefined}
+            onRenderSuccess={() => {
+              setShown(layerScale)
+              setPainted(true)
+            }}
           />
         </div>
       ))}
+      <div className="page-veil" data-painted={painted} />
       {pageMode === 'tint' && <div className="page-overlay page-tint" />}
       {pageMode === 'night' && (
         <>

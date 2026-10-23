@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Document } from 'react-pdf'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -7,7 +7,7 @@ import { ArrowLeft, Bookmark, BookCheck, BookOpen, ChevronLeft, ChevronRight, Co
 import { getBookFile, newId, putHighlight, updateBook, type Book, type Highlight, type HighlightColor, type ReadingPosition } from '../../lib/db'
 import { useBook, useHighlights, useLocalStorage } from '../../lib/hooks'
 import '../../lib/pdf'
-import { bookTransitionName, navigate } from '../../lib/router'
+import { navigate } from '../../lib/router'
 import { useSettings } from '../../lib/settings'
 import { bookProgress } from '../../lib/format'
 import type { PageLayout } from '../../lib/preferences'
@@ -49,17 +49,17 @@ export function ReaderView({ bookId, onOpenSettings }: { bookId: string; onOpenS
       </div>
     )
   }
-  if (!book || !file) return <ReaderFrame bookId={bookId} />
+  if (!book || !file) return <ReaderFrame />
 
   return <Reader key={book.id} book={book} file={file} onOpenSettings={onOpenSettings} />
 }
 
-/** What's on screen while the book is still opening: an empty stage the cover morphs into. */
-function ReaderFrame({ bookId }: { bookId: string }) {
+/** What's on screen while the book is still opening. */
+function ReaderFrame() {
   return (
     <div className="flex h-full flex-col">
       <div className="h-[3.25rem] shrink-0 border-b border-line bg-surface" />
-      <main className="vt-book flex-1 bg-sunken" style={{ viewTransitionName: bookTransitionName(bookId) } as CSSProperties}>
+      <main data-reader-stage className="flex-1 bg-sunken">
         <OpeningState />
       </main>
     </div>
@@ -119,13 +119,16 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     async (doc: PDFDocumentProxy) => {
       setPdf(doc)
       doc.getPageLabels().then(setPageLabels, () => setPageLabels(null))
+      // Lay out with the first page's size straight away (most books are uniform), then correct any odd pages.
+      const first = (await doc.getPage(1)).getViewport({ scale: 1 })
+      setPageSizes(Array.from({ length: doc.numPages }, () => ({ w: first.width, h: first.height })))
       const sizes = await Promise.all(
         Array.from({ length: doc.numPages }, async (_, i) => {
           const vp = (await doc.getPage(i + 1)).getViewport({ scale: 1 })
           return { w: vp.width, h: vp.height }
         }),
       )
-      setPageSizes(sizes)
+      if (sizes.some((s) => s.w !== first.width || s.h !== first.height)) setPageSizes(sizes)
       if (doc.numPages !== book.pageCount) updateBook(book.id, { pageCount: doc.numPages })
     },
     [book.id, book.pageCount],
@@ -510,7 +513,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           />
         )}
 
-        <main className="vt-book relative min-w-0 flex-1 bg-sunken" style={{ viewTransitionName: bookTransitionName(book.id) } as CSSProperties}>
+        <main data-reader-stage className="relative min-w-0 flex-1 bg-sunken">
           <Document
             file={file}
             options={documentOptions}

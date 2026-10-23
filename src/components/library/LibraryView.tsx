@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-react'
 import type { Book } from '../../lib/db'
 import { useBooks, useHighlightCounts, useHighlights } from '../../lib/hooks'
@@ -9,7 +9,7 @@ import { Button, IconButton, inputClass } from '../ui/primitives'
 import { useToast } from '../ui/toast'
 import { BookCard } from './BookCard'
 import { BookCover } from './BookCover'
-import { openBook } from '../../lib/router'
+import { openBook, screenReady } from '../../lib/router'
 import { BookDetailsSheet } from './BookDetails'
 import { DeleteBookDialog } from './DeleteBookDialog'
 
@@ -220,13 +220,19 @@ function Shelves({ children }: { children: ReactNode[] }) {
   const ref = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
 
-  useEffect(() => {
+  // Measured synchronously too, since resize observers don't fire while a screen transition is preparing.
+  useLayoutEffect(() => {
     const el = ref.current
     if (!el) return
+    setWidth(el.clientWidth)
     const observer = new ResizeObserver(() => setWidth(el.clientWidth))
     observer.observe(el)
     return () => observer.disconnect()
   }, [])
+
+  useLayoutEffect(() => {
+    if (width > 0) screenReady('library')
+  }, [width])
 
   const cols = Math.max(2, Math.floor((width + GAP_X) / (CARD_MIN + GAP_X)))
   const cardW = width ? (width - GAP_X * (cols - 1)) / cols : CARD_MIN
