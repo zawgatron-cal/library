@@ -6,6 +6,8 @@ import { flourishOf, isDark, type Theme, type ThemeColors } from '../../lib/them
 import { formatBytes } from '../../lib/format'
 import { Button, Field, Segmented, Sheet, Toggle, inputClass } from '../ui/primitives'
 
+const REPO = 'https://github.com/zawgatron-cal/textbook'
+
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const { settings, update } = useSettings()
 
@@ -99,6 +101,21 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
 
       <Section title="Storage">
         <StorageInfo />
+      </Section>
+
+      <Section title="About">
+        <p className="text-sm leading-relaxed text-muted">
+          <span className="font-display text-base text-ink italic">Library</span> {__APP_VERSION__} is free and open source under the MIT License, and is
+          built on the work of many other open-source projects.
+        </p>
+        <p className="mt-2 flex gap-4 text-sm font-semibold">
+          <a className="text-accent-strong hover:underline" href={REPO} target="_blank" rel="noreferrer">
+            Source code
+          </a>
+          <a className="text-accent-strong hover:underline" href={`${REPO}/blob/v${__APP_VERSION__}/THIRD_PARTY_NOTICES.md`} target="_blank" rel="noreferrer">
+            Licenses &amp; credits
+          </a>
+        </p>
       </Section>
     </Sheet>
   )
