@@ -43,9 +43,9 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 
 ### Make it yours
 
-- **Eight themes** for a study by day or a library after hours. Each pairs two contrasting colours: an accent for buttons and ribbons, and a flourish for progress and gilt details.
-  - Light: _Scriptorium_ (vellum, bottle green and sealing-wax red), _Marble_ (grey stone and verdigris) and _Cartographer_ (sea blues on sand).
-  - Dark: _Wuthering_ (black oak, oxblood and moss), _Tweed_ (browns and leather), _Moorland_ (slate and olive), _Apothecary_ (black glass and sage) and _Velvet_ (plum and midnight blue).
+- **Eight themes** for a study by day or a library after hours. Each is a quiet, near-monotone palette: an accent for buttons and ribbons, and a softer flourish from the same family for progress and gilt details.
+  - Light: _Parchment_ (walnut and sand), _Sage_ (pale greens), _Mist_ (blue-greys) and _Marble_ (grey stone and verdigris).
+  - Dark: _Candlelight_ (smoked oak and amber), _Apothecary_ (black glass and sage), _Midnight_ (inky blue-greys) and _Dusk_ (faded violet and ash).
 - **Create your own**: pick seven colours (background, surface, ink, pencil, accent, flourish, paper) and everything else is mixed from them.
 - **Page colour**: keep pages original, tint them toward the theme's paper colour, or switch to night pages, which recolour the PDF to match dark themes. Tint strength is adjustable.
 - **Interface font** (Nunito, Garamond, Literata, Atkinson Hyperlegible or your system font), interface size, corner roundness, page spacing, paper grain, and reduced motion.
