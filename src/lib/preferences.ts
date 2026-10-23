@@ -2,7 +2,7 @@ import { DEFAULT_THEME_ID, type PageMode, type Theme } from './themes'
 
 export const UI_FONTS = {
   nunito: { label: 'Nunito', family: "'Nunito Variable', system-ui, sans-serif", note: 'Rounded & friendly' },
-  fraunces: { label: 'Fraunces', family: "'Fraunces Variable', Georgia, serif", note: 'Soft old-style serif' },
+  garamond: { label: 'Garamond', family: "'EB Garamond Variable', Georgia, serif", note: 'Classic book serif' },
   literata: { label: 'Literata', family: "'Literata Variable', Georgia, serif", note: 'Made for books' },
   atkinson: { label: 'Atkinson', family: "'Atkinson Hyperlegible', system-ui, sans-serif", note: 'Extra legible' },
   system: { label: 'System', family: 'system-ui, -apple-system, sans-serif', note: "Your computer's own" },

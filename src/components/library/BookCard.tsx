@@ -52,7 +52,7 @@ export function BookCard({
 
         {progress > 0 && progress < 1 && (
           <div className="pointer-events-none absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--surface)_70%,transparent)] backdrop-blur-sm transition duration-300 ease-out group-hover:-translate-y-1.5">
-            <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(progress * 100, 3)}%` }} />
+            <div className="h-full rounded-full bg-flourish" style={{ width: `${Math.max(progress * 100, 3)}%` }} />
           </div>
         )}
         {book.finishedAt && (

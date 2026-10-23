@@ -308,7 +308,7 @@ function ContinueCard({ book }: { book: Book }) {
         <BookCover book={book} />
       </button>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold tracking-wider text-accent uppercase">Where you left off</p>
+        <p className="text-xs font-bold tracking-wider text-flourish uppercase">Where you left off</p>
         <h2 className="mt-1 truncate font-display text-2xl font-medium">{book.title}</h2>
         <p className="truncate text-sm text-muted">
           {book.author || 'Unknown author'} · {formatRelative(book.openedAt!)}
@@ -320,7 +320,7 @@ function ContinueCard({ book }: { book: Book }) {
         )}
         <div className="mt-4 flex items-center gap-3">
           <div className="h-1.5 max-w-xs flex-1 overflow-hidden rounded-full bg-line">
-            <div className="h-full rounded-full bg-accent" style={{ width: `${Math.max(progress * 100, 2)}%` }} />
+            <div className="h-full rounded-full bg-flourish" style={{ width: `${Math.max(progress * 100, 2)}%` }} />
           </div>
           <span className="text-xs font-semibold text-muted tabular-nums">
             p. {page} of {book.pageCount}

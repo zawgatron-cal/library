@@ -12,6 +12,7 @@
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-accent: var(--accent);
+  --color-flourish: var(--flourish);
   --color-on-accent: var(--on-accent);
   --color-paper: var(--paper);
   --color-line: color-mix(in oklab, var(--ink) 11%, var(--surface));
@@ -22,7 +23,7 @@
   --color-accent-strong: color-mix(in oklab, var(--accent) 82%, var(--ink));
 
   --font-sans: var(--ui-font);
-  --font-display: 'Fraunces Variable', 'Iowan Old Style', Georgia, serif;
+  --font-display: 'EB Garamond Variable', Garamond, 'Iowan Old Style', Georgia, serif;
 
   --radius-sm: calc(var(--radius-unit) * 0.5);
   --radius-md: var(--radius-unit);
@@ -58,13 +59,14 @@
 }
 
 :root {
-  --canvas: #f3ede2;
-  --surface: #faf6ee;
-  --ink: #3d342b;
-  --muted: #8b7f71;
-  --accent: #b5694a;
-  --paper: #f8f1e3;
-  --on-accent: #faf6ee;
+  --canvas: #ece3d0;
+  --surface: #f6efdf;
+  --ink: #2a211c;
+  --muted: #7a6a58;
+  --accent: #7b2d26;
+  --flourish: #a07a35;
+  --paper: #f3eadb;
+  --on-accent: #f6efdf;
   --ui-font: 'Nunito Variable', system-ui, sans-serif;
   --radius-unit: 0.75rem;
   --tint-strength: 0.7;
@@ -541,8 +543,10 @@ input[type='range'] {
     color-mix(in oklab, var(--ink) 7%, var(--surface)),
     color-mix(in oklab, var(--ink) 14%, var(--canvas))
   );
+  /* A thin gilt edge along the front of the shelf. */
   box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--surface) 60%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--flourish) 55%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--ink) 10%, transparent),
     0 12px 20px -12px color-mix(in oklab, var(--ink) 45%, transparent);
 }
 

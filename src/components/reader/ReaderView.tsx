@@ -602,7 +602,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           </IconButton>
 
           <div className="absolute inset-x-0 -bottom-px h-0.5 bg-transparent">
-            <div className="h-full bg-accent/70 transition-[width] duration-300" style={{ width: `${progress * 100}%` }} />
+            <div className="h-full bg-flourish/80 transition-[width] duration-300" style={{ width: `${progress * 100}%` }} />
           </div>
         </header>
       )}
@@ -728,7 +728,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           )}
           {focus && (
             <div className="pointer-events-none absolute inset-x-0 top-0 h-0.5">
-              <div className="h-full bg-accent/60" style={{ width: `${progress * 100}%` }} />
+              <div className="h-full bg-flourish/70" style={{ width: `${progress * 100}%` }} />
             </div>
           )}
         </main>

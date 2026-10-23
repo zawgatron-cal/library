@@ -224,7 +224,7 @@ function ContentsPanel({ pdf, currentPage, onJump, book, ocrPages }: Props) {
       </PanelHeader>
       {isGenerated && !waitingForOcr && outline !== null && (
         <div className="mx-5 mb-2 flex items-center gap-2 rounded-md bg-sunken px-3 py-2 text-xs leading-snug text-muted">
-          <Sparkles className="size-3.5 shrink-0 text-accent" />
+          <Sparkles className="size-3.5 shrink-0 text-flourish" />
           <span className="flex-1">{all.length ? 'Built from the headings in this PDF.' : 'No headings stood out in this PDF.'}</span>
           <button
             type="button"

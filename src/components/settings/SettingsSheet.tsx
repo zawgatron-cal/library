@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Palette, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useSettings } from '../../lib/settings'
 import { UI_FONTS, type PageLayout, type Roundness, type ScrollDirection, type UiFont } from '../../lib/preferences'
-import { isDark, type Theme, type ThemeColors } from '../../lib/themes'
+import { flourishOf, isDark, type Theme, type ThemeColors } from '../../lib/themes'
 import { formatBytes } from '../../lib/format'
 import { Button, Field, Segmented, Sheet, Toggle, inputClass } from '../ui/primitives'
 
@@ -146,7 +146,8 @@ const COLOR_FIELDS: { key: keyof ThemeColors; label: string; hint: string }[] = 
   { key: 'surface', label: 'Surface', hint: 'Cards & panels' },
   { key: 'ink', label: 'Ink', hint: 'Main text' },
   { key: 'muted', label: 'Pencil', hint: 'Quiet text' },
-  { key: 'accent', label: 'Accent', hint: 'Buttons & progress' },
+  { key: 'accent', label: 'Accent', hint: 'Buttons & ribbons' },
+  { key: 'flourish', label: 'Flourish', hint: 'Progress & gilt details' },
   { key: 'paper', label: 'Paper', hint: 'Page tint colour' },
 ]
 
@@ -162,8 +163,8 @@ function ThemePicker() {
     const custom: Theme = {
       id: `custom-${crypto.randomUUID().slice(0, 8)}`,
       name: base.custom ? `${base.name} copy` : `My ${base.name}`,
-      blurb: 'Your own blend.',
-      colors: { ...base.colors },
+      blurb: 'Made by you.',
+      colors: { ...base.colors, flourish: flourishOf(base.colors) },
       custom: true,
     }
     update({ customThemes: [...settings.customThemes, custom], themeId: custom.id })
@@ -196,7 +197,7 @@ function ThemePicker() {
           className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-line-strong text-sm font-semibold text-muted transition hover:border-accent hover:text-accent-strong"
         >
           <Plus className="size-4" />
-          Blend your own
+          Create your own
         </button>
       </div>
 
@@ -214,10 +215,13 @@ function ThemePicker() {
           <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
             {COLOR_FIELDS.map(({ key, label, hint }) => (
               <label key={key} className="flex cursor-pointer items-center gap-2.5 rounded-md p-1 hover:bg-hover">
-                <span className="relative size-8 shrink-0 overflow-hidden rounded-full border border-line-strong shadow-soft" style={{ background: editing.colors[key] }}>
+                <span
+                  className="relative size-8 shrink-0 overflow-hidden rounded-full border border-line-strong shadow-soft"
+                  style={{ background: editing.colors[key] ?? flourishOf(editing.colors) }}
+                >
                   <input
                     type="color"
-                    value={editing.colors[key]}
+                    value={editing.colors[key] ?? flourishOf(editing.colors)}
                     onChange={(e) => saveCustom({ ...editing, colors: { ...editing.colors, [key]: e.target.value } })}
                     className="absolute inset-0 cursor-pointer opacity-0"
                   />
@@ -260,11 +264,12 @@ function ThemeCard({ theme, active, onSelect, onEdit }: { theme: Theme; active: 
             <div className="h-1 w-2/3 rounded-full" style={{ background: c.muted, opacity: 0.6 }} />
           </div>
           <div className="flex w-5 flex-col items-center justify-end gap-1">
+            <div className="size-3.5 rounded-full" style={{ background: c.flourish ?? c.accent }} />
             <div className="size-3.5 rounded-full" style={{ background: c.accent }} />
           </div>
         </div>
         <div className="flex items-center justify-between px-2.5 py-1.5" style={{ background: c.surface, color: c.ink }}>
-          <span className="truncate text-xs font-bold">{theme.name}</span>
+          <span className="truncate font-display text-[0.95rem] font-medium">{theme.name}</span>
           {active && <Check className="size-3.5 shrink-0" style={{ color: c.accent }} />}
         </div>
       </button>

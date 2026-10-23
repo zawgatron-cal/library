@@ -43,10 +43,12 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 
 ### Make it yours
 
-- **Eight themes**: Parchment, Sage, Rosewater, Mist, Lavender, Candlelight, Forest and Midnight.
-- **Blend your own**: pick six colours (background, surface, ink, pencil, accent, paper) and everything else is mixed from them.
+- **Eight themes** for a study by day or a library after hours. Each pairs two contrasting colours: an accent for buttons and ribbons, and a flourish for progress and gilt details.
+  - Light: _Reading Room_ (oxblood and brass on old paper), _Marginalia_ (vermilion and lapis), _Herbarium_ (moss and rust) and _Atelier_ (slate and ochre).
+  - Dark: _Oxford_ (walnut, oxblood and brass), _Bodleian_ (green leather and gilt), _Nocturne_ (midnight, claret and gold) and _Midnight Oil_ (umber, amber and sage).
+- **Create your own**: pick seven colours (background, surface, ink, pencil, accent, flourish, paper) and everything else is mixed from them.
 - **Page colour**: keep pages original, tint them toward the theme's paper colour, or switch to night pages, which recolour the PDF to match dark themes. Tint strength is adjustable.
-- **Interface font** (Nunito, Fraunces, Literata, Atkinson Hyperlegible or your system font), interface size, corner roundness, page spacing, paper grain, and reduced motion.
+- **Interface font** (Nunito, Garamond, Literata, Atkinson Hyperlegible or your system font), interface size, corner roundness, page spacing, paper grain, and reduced motion.
 
 ## Getting started
 
@@ -110,6 +112,6 @@ src/
     ui/             Buttons, dialogs, sheets, menus, popovers, toasts
 ```
 
-Theming works through six CSS variables (`--canvas`, `--surface`, `--ink`, `--muted`, `--accent`, `--paper`). Every other colour, including borders, hovers and soft accents, is derived from them with `color-mix()`. PDF pages are themed with blend-mode overlays: a multiply layer for warm tints, and an inverted canvas mapped onto the theme's ink and paper colours for night pages.
+Theming works through seven CSS variables (`--canvas`, `--surface`, `--ink`, `--muted`, `--accent`, `--flourish`, `--paper`). Titles are set in EB Garamond. Every other colour, including borders, hovers and soft accents, is derived from them with `color-mix()`. PDF pages are themed with blend-mode overlays: a multiply layer for warm tints, and an inverted canvas mapped onto the theme's ink and paper colours for night pages.
 
 Your data lives in the browser profile you use Library in. From **Settings → Storage** you can ask the browser to protect it from automatic clean-up.

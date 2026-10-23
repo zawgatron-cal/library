@@ -38,7 +38,7 @@ export function BookDetailsSheet({ book, annotationCount, onClose, onDelete }: {
           <p className="font-display text-xl leading-snug font-medium">{book.title}</p>
           <p className="mt-1 text-sm text-muted">{book.author || 'Unknown author'}</p>
           <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-line">
-            <div className="h-full rounded-full bg-accent" style={{ width: `${progress * 100}%` }} />
+            <div className="h-full rounded-full bg-flourish" style={{ width: `${progress * 100}%` }} />
           </div>
           <p className="mt-1.5 text-xs text-muted">{progress >= 1 ? 'Finished' : progress > 0 ? `${Math.round(progress * 100)}% read` : 'Not started'}</p>
         </div>

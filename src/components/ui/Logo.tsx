@@ -7,7 +7,7 @@ export function LogoMark({ className = 'size-8' }: { className?: string }) {
         fill="var(--on-accent)"
         opacity="0.95"
       />
-      <path d="M19.5 10.6v5.2l1.3-1 1.3 1v-5.4" fill="var(--accent)" opacity="0.9" />
+      <path d="M19.5 10.6v5.2l1.3-1 1.3 1v-5.4" fill="var(--flourish)" />
     </svg>
   )
 }
@@ -16,7 +16,7 @@ export function Wordmark() {
   return (
     <span className="flex items-center gap-2.5">
       <LogoMark />
-      <span className="font-display text-[1.35rem] font-medium tracking-tight">Library</span>
+      <span className="font-display text-[1.6rem] leading-none font-medium italic">Library</span>
     </span>
   )
 }
