@@ -1,0 +1,73 @@
+# Installers for macOS, Windows and Linux. Everything the app needs is bundled into dist/ by Vite, so the package
+# holds only dist/, the desktop shell and its icons (no node_modules).
+appId: io.github.zawgatron-cal.library
+productName: Library
+copyright: Copyright © 2026 Library contributors
+artifactName: ${productName}-${version}-${os}-${arch}.${ext}
+
+directories:
+  output: release
+  buildResources: desktop/icons
+
+files:
+  - dist/**/*
+  - desktop/main.cjs
+  - desktop/icons/icon.png
+  - package.json
+  - '!node_modules{,/**/*}'
+
+asar: true
+
+# Library's own license and the notices of everything bundled with it, beside the app. Electron adds its own
+# LICENSE.electron.txt and LICENSES.chromium.html.
+extraResources:
+  - LICENSE
+  - THIRD_PARTY_NOTICES.md
+  - { from: desktop/icons/LICENSE.md, to: ICON_LICENSE.md }
+compression: maximum
+
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+  icon: desktop/icons/icon.icns
+  category: public.app-category.education
+  darkModeSupport: true
+  # Ad-hoc signed so Apple silicon runs it. To sign and notarize with an Apple Developer ID instead, remove this line
+  # and provide CSC_LINK / CSC_KEY_PASSWORD and APPLE_ID / APPLE_APP_SPECIFIC_PASSWORD / APPLE_TEAM_ID.
+  identity: '-'
+  hardenedRuntime: false
+  gatekeeperAssess: false
+
+dmg:
+  title: ${productName} ${version}
+  contents:
+    - { x: 150, y: 190 }
+    - { x: 390, y: 190, type: link, path: /Applications }
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: desktop/icons/icon.ico
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Library
+  license: LICENSE
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+  icon: desktop/icons/linux
+  category: Office
+  synopsis: A cozy PDF reader for reading and studying
+  executableName: library
+  syncDesktopName: true
+  maintainer: Library contributors <library@users.noreply.github.com>
