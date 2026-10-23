@@ -59,14 +59,14 @@
 }
 
 :root {
-  --canvas: #ece3d0;
-  --surface: #f6efdf;
-  --ink: #2a211c;
-  --muted: #7a6a58;
-  --accent: #7b2d26;
-  --flourish: #a07a35;
-  --paper: #f3eadb;
-  --on-accent: #f6efdf;
+  --canvas: #e8dfcc;
+  --surface: #f4ecdb;
+  --ink: #231c16;
+  --muted: #76695a;
+  --accent: #2f4a3a;
+  --flourish: #8a2f2a;
+  --paper: #f2eadb;
+  --on-accent: #f4ecdb;
   --ui-font: 'Nunito Variable', system-ui, sans-serif;
   --radius-unit: 0.75rem;
   --tint-strength: 0.7;

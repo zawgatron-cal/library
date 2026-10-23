@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, type ReactNode } from 'react'
 import { useLocalStorage } from './hooks'
 import { DEFAULT_SETTINGS, ROUNDNESS, UI_FONTS, type Settings } from './preferences'
-import { PRESET_THEMES, RETIRED_THEMES, defaultPageMode, flourishOf, isDark, onAccent, type PageMode, type Theme } from './themes'
+import { DEFAULT_THEME, PRESET_THEMES, RETIRED_THEMES, defaultPageMode, flourishOf, isDark, onAccent, type PageMode, type Theme } from './themes'
 
 type SettingsContextValue = {
   settings: Settings
@@ -19,7 +19,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   const themes = useMemo(() => [...PRESET_THEMES, ...settings.customThemes], [settings.customThemes])
   const themeId = RETIRED_THEMES[settings.themeId] ?? settings.themeId
-  const theme = themes.find((t) => t.id === themeId) ?? PRESET_THEMES[0]
+  const theme = themes.find((t) => t.id === themeId) ?? DEFAULT_THEME
   const uiFont = UI_FONTS[settings.uiFont] ?? UI_FONTS[DEFAULT_SETTINGS.uiFont]
   const dark = isDark(theme.colors)
   const pageMode = settings.pageMode === 'auto' ? defaultPageMode(theme.colors) : settings.pageMode
