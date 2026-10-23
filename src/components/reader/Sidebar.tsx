@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
-import { Bookmark, BookmarkPlus, ChevronRight, RefreshCw, Sparkles, ChevronsDownUp, ChevronsUpDown, Download, GalleryVertical, Highlighter, ListTree, NotebookPen, Search, Trash2, X } from 'lucide-react'
-import { HIGHLIGHT_COLORS, deleteHighlight, updateBook, type Book, type Highlight, type HighlightColor, type OcrPage, type OutlineEntry } from '../../lib/db'
-import { generateOutline } from '../../lib/autoToc'
+import { Bookmark, BookmarkPlus, ChevronRight, ChevronsDownUp, ChevronsUpDown, Download, GalleryVertical, Highlighter, ListTree, NotebookPen, Search, Trash2, X } from 'lucide-react'
+import { HIGHLIGHT_COLORS, deleteHighlight, updateBook, type Book, type Highlight, type HighlightColor, type OcrPage } from '../../lib/db'
 import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
 import { escapeRegExp, tidyHeading } from '../../lib/format'
 import { IconButton, inputClass } from '../ui/primitives'
@@ -110,26 +109,11 @@ function flattenAll(nodes: OutlineNode[], depth = 0): FlatNode[] {
 
 const ancestorsOf = (id: string) => id.split('.').slice(0, -1).map((_, i, parts) => parts.slice(0, i + 1).join('.'))
 
-function fromEntries(entries: OutlineEntry[]): OutlineNode[] {
-  const root: OutlineNode[] = []
-  const stack: OutlineNode[] = []
-  for (const e of entries) {
-    stack.length = Math.min(stack.length, e.level)
-    const siblings = stack.length ? stack[stack.length - 1].children : root
-    const id = [...stack.map((n) => n.id.split('.').at(-1)), siblings.length].join('.')
-    const node: OutlineNode = { id, title: tidyHeading(e.title), page: e.page, children: [] }
-    siblings.push(node)
-    stack.push(node)
-  }
-  return root
-}
-
-function ContentsPanel({ pdf, currentPage, onJump, book, ocrPages }: Props) {
+function ContentsPanel({ pdf, currentPage, onJump, book }: Props) {
   const [embedded, setEmbedded] = useState<OutlineNode[] | null>(null)
   const [mode, setMode] = useState<'auto' | 'all' | 'none'>('auto')
   const [overrides, setOverrides] = useState<Map<string, boolean>>(new Map())
   const [filter, setFilter] = useState('')
-  const [generating, setGenerating] = useState<number | null>(null)
 
   useEffect(() => {
     if (!pdf) return
@@ -144,29 +128,7 @@ function ContentsPanel({ pdf, currentPage, onJump, book, ocrPages }: Props) {
     }
   }, [pdf])
 
-  const waitingForOcr = book.ocr === 'queued'
-  const needsGenerating = embedded?.length === 0 && book.generatedOutline == null && !waitingForOcr
-  useEffect(() => {
-    if (!pdf || !needsGenerating) return
-    const signal = { cancelled: false }
-    generateOutline(pdf, ocrPages, (f) => !signal.cancelled && setGenerating(f), signal)
-      .then(async (entries) => {
-        if (!signal.cancelled) await updateBook(book.id, { generatedOutline: entries })
-      })
-      .catch((err) => console.error('Could not build contents', err))
-      .finally(() => !signal.cancelled && setGenerating(null))
-    return () => {
-      signal.cancelled = true
-    }
-  }, [pdf, needsGenerating, ocrPages, book.id])
-
-  const generated = useMemo(() => (book.generatedOutline ? fromEntries(book.generatedOutline) : null), [book.generatedOutline])
-  const isGenerated = embedded?.length === 0
-  const outline = useMemo(
-    () => (embedded === null ? null : embedded.length ? embedded : (generated ?? (needsGenerating ? null : []))),
-    [embedded, generated, needsGenerating],
-  )
-
+  const outline = embedded
   const all = useMemo(() => flattenAll(outline ?? []), [outline])
   const currentId = useMemo(() => {
     let id: string | null = null
@@ -222,29 +184,11 @@ function ContentsPanel({ pdf, currentPage, onJump, book, ocrPages }: Props) {
           </button>
         )}
       </PanelHeader>
-      {isGenerated && !waitingForOcr && outline !== null && (
-        <div className="mx-5 mb-2 flex items-center gap-2 rounded-md bg-sunken px-3 py-2 text-xs leading-snug text-muted">
-          <Sparkles className="size-3.5 shrink-0 text-flourish" />
-          <span className="flex-1">{all.length ? 'Built from the headings in this PDF.' : 'No headings stood out in this PDF.'}</span>
-          <button
-            type="button"
-            onClick={() => updateBook(book.id, { generatedOutline: null })}
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 font-bold text-accent-strong hover:bg-accent-soft"
-          >
-            <RefreshCw className="size-3" />
-            Rebuild
-          </button>
-        </div>
-      )}
       {outline === null ? (
-        <Empty>{embedded === null ? 'Reading the table of contents…' : `Finding headings… ${Math.round((generating ?? 0) * 100)}%`}</Empty>
+        <Empty>Reading the table of contents…</Empty>
       ) : all.length === 0 ? (
         <>
-          <Empty>
-            {waitingForOcr
-              ? 'This PDF has no table of contents. One will be built from the headings once its text has been recognised.'
-              : "This PDF doesn't include a table of contents. Bookmarks you add will show up here too."}
-          </Empty>
+          <Empty>This PDF doesn't include a table of contents. Bookmarks you add will show up here too.</Empty>
           <PageList book={book} currentPage={currentPage} onJump={onJump} />
         </>
       ) : (

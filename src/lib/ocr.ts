@@ -166,7 +166,7 @@ async function processBook(bookId: string) {
       setProgress({ bookId, done, total, state: 'running' })
     }
     // Headings found in the recognised text make better contents, so rebuild them.
-    await updateBook(bookId, (b) => (b.ocr === 'queued' ? { ocr: 'done', generatedOutline: null } : {}))
+    await updateBook(bookId, (b) => (b.ocr === 'queued' ? { ocr: 'done' } : {}))
     setProgress({ bookId, done, total, state: 'finished' })
   } finally {
     pdf.destroy()

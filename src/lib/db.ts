@@ -34,8 +34,6 @@ export type Book = {
   notes: string
   /** Text recognition for scanned pages: queued (or running), paused, or done. Missing until it's been asked for. */
   ocr?: OcrStatus | null
-  /** Contents found from the book's headings, for PDFs without an outline. Cleared when it should be rebuilt. */
-  generatedOutline?: OutlineEntry[] | null
   /** Clockwise rotation of the whole view, in degrees. */
   rotation?: number
   /** Extra clockwise rotation of individual pages (on top of the view's), in degrees. */
@@ -47,8 +45,6 @@ export type Book = {
 }
 
 export type OcrStatus = 'queued' | 'paused' | 'done'
-
-export type OutlineEntry = { title: string; page: number; level: number }
 
 export const HIGHLIGHT_COLORS = ['sun', 'leaf', 'sky', 'rose', 'lilac'] as const
 export type HighlightColor = (typeof HIGHLIGHT_COLORS)[number]
