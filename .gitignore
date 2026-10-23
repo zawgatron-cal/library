@@ -55,3 +55,4 @@ coverage/
 
 # Desktop installers
 release/
+.vite/
