@@ -20,6 +20,37 @@ export { pdfjs }
 export const documentOptions = {
   cMapUrl: `${import.meta.env.BASE_URL}pdfjs/cmaps/`,
   standardFontDataUrl: `${import.meta.env.BASE_URL}pdfjs/standard_fonts/`,
+  wasmUrl: `${import.meta.env.BASE_URL}pdfjs/wasm/`,
+  iccUrl: `${import.meta.env.BASE_URL}pdfjs/iccs/`,
+}
+
+/** Asks the reader for a PDF's password; resolves to null if they cancel. */
+export type AskPassword = (fileName: string, wrongGuess: boolean) => Promise<string | null>
+
+/** pdf.js's reason codes for asking: the password is needed, or the last one given was wrong. */
+const INCORRECT_PASSWORD = 2
+
+/** Opens a PDF, asking for its password if it has one. `password` is tried first, if given. */
+export async function openPdf(data: Uint8Array, fileName: string, ask: AskPassword, password?: string, worker?: InstanceType<typeof pdfjs.PDFWorker>) {
+  const task = pdfjs.getDocument({ data, ...documentOptions, password, worker })
+  let used = password
+  task.onPassword = (update: (password: string) => void, reason: number) => {
+    void ask(fileName, reason === INCORRECT_PASSWORD).then((answer) => {
+      if (answer == null) void task.destroy()
+      else update((used = answer))
+    })
+  }
+  const pdf = await task.promise
+  return { pdf, password: used }
+}
+
+/** A short, human reason a PDF couldn't be opened. */
+export function openFailure(err: unknown) {
+  const name = (err as { name?: string } | null)?.name
+  if (name === 'PasswordException') return 'it needs a password'
+  if (name === 'InvalidPDFException') return 'the file looks damaged or incomplete'
+  if (name === 'AbortException' || /destroyed/i.test(String((err as Error | null)?.message))) return null
+  return 'it may be damaged'
 }
 
 /** Pages with fewer characters of real text than this are treated as images that need text recognition. */
@@ -68,9 +99,8 @@ async function renderCover(pdf: PDFDocumentProxy) {
   return canvas.toDataURL('image/jpeg', 0.82)
 }
 
-export async function importPdf(file: File): Promise<Book> {
-  const data = new Uint8Array(await file.arrayBuffer())
-  const pdf = await pdfjs.getDocument({ data, ...documentOptions }).promise
+export async function importPdf(file: File, ask: AskPassword): Promise<Book> {
+  const { pdf, password } = await openPdf(new Uint8Array(await file.arrayBuffer()), file.name, ask)
   try {
     const meta = await pdf.getMetadata().catch(() => null)
     const info = (meta?.info ?? {}) as Record<string, unknown>
@@ -97,6 +127,7 @@ export async function importPdf(file: File): Promise<Book> {
       bookmarks: [],
       notes: '',
       ocr: scanned ? 'queued' : null,
+      ...(password ? { password } : {}),
     }
     await addBook(book, new Blob([file], { type: 'application/pdf' }))
     return book
@@ -105,6 +136,9 @@ export async function importPdf(file: File): Promise<Book> {
   }
 }
 
-export function isPdf(file: File) {
-  return file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+/** By name or type, or failing those (files saved without an extension) by the `%PDF-` signature near the start. */
+export async function isPdf(file: File) {
+  if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) return true
+  if (file.type && !/octet-stream|^$/.test(file.type)) return false
+  return (await file.slice(0, 1024).text().catch(() => '')).includes('%PDF-')
 }

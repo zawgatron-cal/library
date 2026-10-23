@@ -42,6 +42,8 @@ export type Book = {
   pageRotations?: Record<number, number>
   /** Pages whose size or built-in rotation differs from page 1, as [width, height, rotate]. Missing until measured. */
   oddPages?: Record<number, [number, number, number]>
+  /** Password the PDF opens with, if it's protected. Kept beside the file so it's only asked for once. */
+  password?: string
 }
 
 export type OcrStatus = 'queued' | 'paused' | 'done'

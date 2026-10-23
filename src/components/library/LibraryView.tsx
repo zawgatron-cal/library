@@ -3,10 +3,11 @@ import { Archive, ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-rea
 import type { Book } from '../../lib/db'
 import { useBooks, useHighlightCounts, useHighlights } from '../../lib/hooks'
 import { bookProgress, displayPage, formatRelative } from '../../lib/format'
-import { importPdf, isPdf } from '../../lib/pdf'
+import { importPdf, isPdf, openFailure } from '../../lib/pdf'
 import { Wordmark } from '../ui/Logo'
 import { Button, IconButton, inputClass } from '../ui/primitives'
 import { useToast } from '../ui/toast'
+import { usePasswordPrompt } from '../ui/usePasswordPrompt'
 import { BookCard } from './BookCard'
 import { BookCover } from './BookCover'
 import { openBook, screenReady } from '../../lib/router'
@@ -54,9 +55,11 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const [deleting, setDeleting] = useState<Book | null>(null)
   const dragging = useFileDrag(handleFiles)
+  const [askPassword, passwordDialog] = usePasswordPrompt()
 
   async function handleFiles(files: File[]) {
-    const pdfs = files.filter(isPdf)
+    const checks = await Promise.all(files.map(isPdf))
+    const pdfs = files.filter((_, i) => checks[i])
     if (!pdfs.length) {
       if (files.length) toast('Library only reads PDFs for now')
       return
@@ -64,11 +67,14 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
     setImporting((n) => n + pdfs.length)
     for (const file of pdfs) {
       try {
-        const book = await importPdf(file)
+        const book = await importPdf(file, askPassword)
         toast(`Added “${book.title}”`)
       } catch (err) {
-        console.error(err)
-        toast(`Couldn't open ${file.name}`)
+        const reason = openFailure(err)
+        if (reason) {
+          console.error(err)
+          toast(`Couldn't add ${file.name}: ${reason}`)
+        }
       } finally {
         setImporting((n) => n - 1)
       }
@@ -223,6 +229,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         />
       )}
       {deleting && <DeleteBookDialog book={deleting} onClose={() => setDeleting(null)} />}
+      {passwordDialog}
     </div>
   )
 }

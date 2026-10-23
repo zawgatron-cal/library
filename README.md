@@ -8,7 +8,7 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 
 ### Your shelves
 
-- **Add books** from the tile at the start of your shelves, or drag one or many PDFs anywhere onto the window. Title and author are read from the file's metadata, and a cover is rendered from the first page.
+- **Add books** from the tile at the start of your shelves, or drag one or many PDFs anywhere onto the window. Title and author are read from the file's metadata, and a cover is rendered from the first page. Password-protected PDFs ask for their password once, and files saved without a `.pdf` extension are recognised by their contents.
 - **Stored locally** in your browser's IndexedDB. Nothing is uploaded anywhere, and it all works offline.
 - **Where you left off**: the book you were last reading, with the last thing you annotated in it.
 - **Book details**: right-click any book (or use its menu) to edit its title, author and shelves, mark it finished or favourite, and see pages, time spent reading, annotations and bookmarks.

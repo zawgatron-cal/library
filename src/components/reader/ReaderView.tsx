@@ -15,6 +15,7 @@ import { bookProgress } from '../../lib/format'
 import type { PageLayout } from '../../lib/preferences'
 import { Button, Dialog, IconButton, Kbd } from '../ui/primitives'
 import { useToast } from '../ui/toast'
+import { usePasswordPrompt } from '../ui/usePasswordPrompt'
 import { AnnotationPopover, type PopoverTarget } from './AnnotationPopover'
 import { GoToDialog } from './GoToDialog'
 import { clampZoom, fitScale, type PageSize } from './layout'
@@ -189,9 +190,25 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
 
   /* ----- loading ----- */
 
+  const [askPassword, passwordDialog] = usePasswordPrompt()
+  const typedPassword = useRef<string | null>(null)
+  const onPassword = useCallback(
+    (unlock: (password: string) => void, reason: number) => {
+      const wrongGuess = reason === 2
+      if (book.password && !wrongGuess) return unlock(book.password)
+      void askPassword(book.title, wrongGuess).then((password) => {
+        if (password == null) return navigate({ view: 'library' })
+        typedPassword.current = password
+        unlock(password)
+      })
+    },
+    [book.password, book.title, askPassword],
+  )
+
   const onLoad = useCallback(
     async (doc: PDFDocumentProxy) => {
       setPdf(doc)
+      if (typedPassword.current) updateBook(book.id, { password: typedPassword.current })
       doc.getPageLabels().then(setPageLabels, () => setPageLabels(null))
       const firstPage = await doc.getPage(1)
       const first = { ...viewportSize(firstPage), rotate: firstPage.rotate }
@@ -635,6 +652,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
             file={file}
             options={documentOptions}
             onLoadSuccess={onLoad}
+            onPassword={onPassword}
             onItemClick={({ pageNumber }) => jump(pageNumber)}
             loading={<OpeningState />}
             error={
@@ -675,6 +693,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
               <OpeningState />
             )}
           </Document>
+          {passwordDialog}
 
           {!focus && book.ocr === 'queued' && (
             <OcrPill progress={ocrProgress} onPause={() => pauseOcr(book.id).then(() => toast('Paused — resume from the book’s details'))} />

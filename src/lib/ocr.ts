@@ -121,7 +121,7 @@ async function processBook(bookId: string) {
   const file = await getBookFile(bookId)
   if (!book || !file) return
   setProgress({ bookId, done: 0, total: 0, state: 'starting' })
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), ...documentOptions, worker: backgroundPdfWorker() }).promise
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), ...documentOptions, password: book.password, worker: backgroundPdfWorker() }).promise
   try {
     const stored = new Map((await listOcrPages(bookId)).map((p) => [p.page, p]))
     const needed: number[] = []
