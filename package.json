@@ -8,10 +8,10 @@
     "email": "library@users.noreply.github.com"
   },
   "license": "MIT",
-  "homepage": "https://github.com/zawgatron-cal/textbook#readme",
+  "homepage": "https://github.com/zawgatron-cal/library#readme",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zawgatron-cal/textbook.git"
+    "url": "https://github.com/zawgatron-cal/library.git"
   },
   "private": true,
   "type": "module",

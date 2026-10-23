@@ -6,7 +6,7 @@ import { flourishOf, isDark, type Theme, type ThemeColors } from '../../lib/them
 import { formatBytes } from '../../lib/format'
 import { Button, Field, Segmented, Sheet, Toggle, inputClass } from '../ui/primitives'
 
-const REPO = 'https://github.com/zawgatron-cal/textbook'
+const REPO = 'https://github.com/zawgatron-cal/library'
 
 export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const { settings, update } = useSettings()

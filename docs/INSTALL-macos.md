@@ -6,7 +6,7 @@ That does **not** mean the app was flagged as malware. It means Apple has not ch
 
 ## Install
 
-1. Download the correct `.dmg` from [Releases](https://github.com/zawgatron-cal/textbook/releases/latest):
+1. Download the correct `.dmg` from [Releases](https://github.com/zawgatron-cal/library/releases/latest):
    - **Apple silicon** (M1, M2, M3, M4, …): `Library-…-mac-arm64.dmg`
    - **Intel Mac**: `Library-…-mac-x64.dmg`
 2. Open the `.dmg` and drag **Library** into **Applications**.
