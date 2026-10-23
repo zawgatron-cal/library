@@ -45,6 +45,13 @@ The `arm64` AppImage and deb are for Linux on ARM.
 
 Uninstalling the app leaves it in place. To start over, delete that folder.
 
+**Updates.** The desktop app checks [GitHub Releases](https://github.com/zawgatron-cal/library/releases/latest) shortly after launch, then about every 12 hours.
+
+- **Windows** and **Linux AppImage**: Library can download and install a newer version in the background, then ask you to restart.
+- **macOS** and **Linux `.deb`**: you get a dialog with a link to the right installer. In-app install on macOS needs an Apple Developer ID and notarization; until then, download the new `.dmg` like the first install.
+
+Version **1.0.0** does not include the updater; install **1.0.1** or later once to get update prompts.
+
 ## Features
 
 ### Your shelves

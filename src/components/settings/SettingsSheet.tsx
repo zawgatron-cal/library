@@ -106,7 +106,8 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
       <Section title="About">
         <p className="text-sm leading-relaxed text-muted">
           <span className="font-display text-base text-ink italic">Library</span> {__APP_VERSION__} is free and open source under the MIT License, and is
-          built on the work of many other open-source projects.
+          built on the work of many other open-source projects. The desktop app checks for updates from GitHub Releases
+          after launch.
         </p>
         <p className="mt-2 flex gap-4 text-sm font-semibold">
           <a className="text-accent-strong hover:underline" href={REPO} target="_blank" rel="noreferrer">

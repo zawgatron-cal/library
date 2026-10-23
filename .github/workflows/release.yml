@@ -41,9 +41,12 @@ jobs:
           if-no-files-found: error
           path: |
             release/*.dmg
+            release/*.zip
             release/*.exe
             release/*.AppImage
             release/*.deb
+            release/latest*.yml
+            release/*.blockmap
 
   publish:
     needs: build

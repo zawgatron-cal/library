@@ -1,6 +1,7 @@
 // The desktop shell: one sandboxed window showing the web app, served from a private `app://library` origin so
 // IndexedDB, module workers, WebAssembly and fetch behave exactly as they do on the web.
 const { app, BrowserWindow, Menu, net, protocol, screen, shell } = require('electron')
+const { setupUpdates } = require('./update.cjs')
 const fs = require('node:fs')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')
@@ -96,6 +97,7 @@ function createWindow() {
 
   win.loadURL(DEV_URL ?? `${ORIGIN}/index.html`)
   win.on('closed', () => (win = null))
+  setupUpdates(win)
 }
 
 app.on('second-instance', () => {
