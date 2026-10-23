@@ -1,15 +1,56 @@
-# Library
+<p align="center">
+  <img src="desktop/icons/icon.png" width="128" alt="Library's icon: a black cat asleep on a stack of books" />
+</p>
 
-A light-weight, cozy, open-source PDF reader for reading and studying literature — kept entirely on your own computer.
+<h1 align="center">Library</h1>
+
+<p align="center">
+  A light-weight, cozy, open-source PDF reader for reading and studying, kept entirely on your own computer.
+  <br />
+  <a href="https://github.com/zawgatron-cal/textbook/releases/latest"><strong>Download for macOS, Windows or Linux</strong></a>
+</p>
 
 Library is built around one idea: reading should feel handcrafted. Soft themes, warm paper tones, gentle typography, and a quiet interface that gets out of the way so you can sink into a book, a paper, or a course reader.
+
+<p align="center">
+  <img src="docs/library.webp" width="49%" alt="Your shelves, with the book you were last reading at the top" />
+  <img src="docs/reader.webp" width="49%" alt="Reading Pride and Prejudice with the table of contents open" />
+</p>
+
+## Download
+
+Get the latest version from the [Releases page](https://github.com/zawgatron-cal/textbook/releases/latest).
+
+| System | File |
+| --- | --- |
+| macOS, Apple silicon (M1 and later) | `Library-…-mac-arm64.dmg` |
+| macOS, Intel | `Library-…-mac-x64.dmg` |
+| Windows 10 and 11 | `Library-…-win-x64.exe` |
+| Linux, any distribution | `Library-…-linux-x86_64.AppImage` |
+| Debian, Ubuntu, Mint, Pop!_OS | `Library-…-linux-amd64.deb` |
+
+The `arm64` AppImage and deb are for Linux on ARM.
+
+**First launch.** Library isn't signed with a paid Apple or Microsoft developer certificate yet, so your system checks with you the first time you open it:
+
+- **macOS**: drag Library into Applications and open it. When macOS says it can't verify the developer, go to **System Settings → Privacy & Security** and click **Open Anyway**.
+- **Windows**: if SmartScreen says "Windows protected your PC", click **More info → Run anyway**.
+- **Linux**: make the AppImage executable (`chmod +x Library-*.AppImage`) and run it, or install the deb with `sudo apt install ./Library-*.deb`.
+
+**Your data** (books, annotations, notes and settings) is stored by the app on your computer:
+
+- macOS: `~/Library/Application Support/Library`
+- Windows: `%APPDATA%\Library`
+- Linux: `~/.config/Library`
+
+Uninstalling the app leaves it in place. To start over, delete that folder.
 
 ## Features
 
 ### Your shelves
 
 - **Add books** from the tile at the start of your shelves, or drag one or many PDFs anywhere onto the window. Title and author are read from the file's metadata, and a cover is rendered from the first page. Password-protected PDFs ask for their password once, and files saved without a `.pdf` extension are recognised by their contents.
-- **Stored locally** in your browser's IndexedDB. Nothing is uploaded anywhere, and it all works offline.
+- **Stored locally** on your computer. Nothing is uploaded anywhere, and it all works offline.
 - **Where you left off**: the book you were last reading, with the last thing you annotated in it.
 - **Book details**: right-click any book (or use its menu) to edit its title, author and shelves, mark it finished or favourite, and see pages, time spent reading, annotations and bookmarks.
 - **Archive** a book with one click to take it off your shelves without deleting anything; an _Archived_ filter brings it back.
@@ -49,22 +90,6 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 - **Page colour**: keep pages original, tint them toward the theme's paper colour, or switch to night pages, which recolour the PDF to match dark themes. Tint strength is adjustable.
 - **Interface font** (Nunito, Garamond, Literata, Atkinson Hyperlegible or your system font), interface size, corner roundness, page spacing, paper grain, and reduced motion.
 
-## Getting started
-
-```bash
-npm install
-npm run dev
-```
-
-Then open http://localhost:5173 and drop in a PDF.
-
-| Script            | What it does                         |
-| ----------------- | ------------------------------------ |
-| `npm run dev`     | Start the dev server                 |
-| `npm run build`   | Type-check and build to `dist/`      |
-| `npm run preview` | Serve the production build locally   |
-| `npm run lint`    | Lint with ESLint                     |
-
 ## Keyboard shortcuts
 
 | Keys                     | Action                 |
@@ -87,11 +112,53 @@ Then open http://localhost:5173 and drop in a PDF.
 | <kbd>F</kbd>             | Focus mode             |
 | <kbd>Esc</kbd>           | Close / exit focus     |
 
+## Building from source
+
+You need [Node.js](https://nodejs.org) 22 or later.
+
+```bash
+git clone https://github.com/zawgatron-cal/textbook.git library
+cd library
+npm install
+npm run dev        # the web version at http://localhost:5173
+npm run desktop    # the desktop app
+```
+
+| Script | What it does |
+| --- | --- |
+| `npm run dev` | Start the web dev server |
+| `npm run desktop` | Build, then open the desktop app |
+| `npm run build` | Type-check and build the web app to `dist/` |
+| `npm run dist` | Build installers for the current system into `release/` |
+| `npm run dist:mac`, `dist:win`, `dist:linux` | Build installers for one system |
+| `npm run lint` | Lint with ESLint |
+| `npm run notices` | Regenerate `THIRD_PARTY_NOTICES.md` after changing dependencies |
+
+macOS installers must be built on a Mac. Windows and Linux installers build anywhere, though Windows ones are easiest on Windows.
+
+### Releasing
+
+Pushing a version tag builds the installers on macOS, Windows and Linux with GitHub Actions and publishes them as a release:
+
+```bash
+npm version 1.0.1          # bumps package.json and creates the tag v1.0.1
+git push && git push --tags
+```
+
+The release notes come from `.github/release-notes.md`. To sign the macOS app with an Apple Developer ID, see the comment in `electron-builder.yml`.
+
+The web version can be hosted on any static host: run `npm run build` and serve `dist/`.
+
 ## How it's built
 
-React 19, TypeScript, Vite and Tailwind CSS v4, with [react-pdf](https://github.com/wojtekmaj/react-pdf) (pdf.js) for rendering, [tesseract.js](https://github.com/naptha/tesseract.js) for text recognition, and [idb](https://github.com/jakearchibald/idb) for storage. Screen changes use the View Transitions API where the browser supports it.
+React 19, TypeScript, Vite and Tailwind CSS v4, packaged for the desktop with [Electron](https://www.electronjs.org) and [electron-builder](https://www.electron.build), with [react-pdf](https://github.com/wojtekmaj/react-pdf) (pdf.js) for rendering, [tesseract.js](https://github.com/naptha/tesseract.js) for text recognition, and [idb](https://github.com/jakearchibald/idb) for storage. Screen changes use the View Transitions API where the browser supports it.
 
 ```
+desktop/
+  main.cjs        The desktop app: one sandboxed Electron window serving dist/ from app://library
+  icons/          The icon artwork and the app icons made from it (make-icons.py)
+scripts/
+  third-party-notices.mjs  Writes THIRD_PARTY_NOTICES.md from the dependency tree
 src/
   lib/
     db.ts           IndexedDB: books, PDF files, annotations, recognised text
@@ -112,4 +179,10 @@ src/
 
 Theming works through seven CSS variables (`--canvas`, `--surface`, `--ink`, `--muted`, `--accent`, `--flourish`, `--paper`). Titles are set in EB Garamond. Every other colour, including borders, hovers and soft accents, is derived from them with `color-mix()`. PDF pages are themed with blend-mode overlays: a multiply layer for warm tints, and an inverted canvas mapped onto the theme's ink and paper colours for night pages.
 
-Your data lives in the browser profile you use Library in. From **Settings → Storage** you can ask the browser to protect it from automatic clean-up.
+## License
+
+Library's source code is released under the [MIT License](LICENSE).
+
+The icon artwork (the cat on the books) is not covered by the MIT License. See [`desktop/icons/LICENSE.md`](desktop/icons/LICENSE.md): you may use it to represent Library, but please give forks their own icon.
+
+Library is built on many open-source projects, including pdf.js, Tesseract, React, Electron and the EB Garamond, Nunito, Literata and Atkinson Hyperlegible fonts. Their licenses are collected in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and installed alongside the app. You can also find them from **Settings → About**.
