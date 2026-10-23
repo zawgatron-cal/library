@@ -2,6 +2,7 @@ import { Archive, ArchiveRestore, BookCheck, Download, Heart, Info, MoreHorizont
 import { listHighlights, updateBook, type Book } from '../../lib/db'
 import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
 import { bookProgress } from '../../lib/format'
+import { useOcrProgress } from '../../lib/hooks'
 import { Menu } from '../ui/Menu'
 import { BookCover } from './BookCover'
 import { openBook } from '../../lib/router'
@@ -21,6 +22,8 @@ export function BookCard({
 }) {
   const progress = bookProgress(book)
   const toast = useToast()
+  const ocr = useOcrProgress(book.id)
+  const reading = book.ocr === 'queued' && ocr?.state === 'running' && ocr.total > 0
   const archived = !!book.archivedAt
   const toggleArchived = () => setArchived(book, !archived, toast)
 
@@ -110,7 +113,15 @@ export function BookCard({
         </button>
         <p className="mt-0.5 truncate text-xs text-muted">{book.author || 'Unknown author'}</p>
         <p className="mt-1 text-[0.7rem] font-semibold text-muted/80">
-          {progress >= 1 ? 'Read' : progress > 0 ? `${Math.round(progress * 100)}%` : 'New'}
+          {reading ? (
+            <span className="text-accent-strong">Reading text… {Math.round((ocr.done / ocr.total) * 100)}%</span>
+          ) : progress >= 1 ? (
+            'Read'
+          ) : progress > 0 ? (
+            `${Math.round(progress * 100)}%`
+          ) : (
+            'New'
+          )}
           {annotationCount > 0 && ` · ${annotationCount} annotation${annotationCount === 1 ? '' : 's'}`}
         </p>
       </div>

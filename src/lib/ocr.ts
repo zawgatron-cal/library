@@ -92,7 +92,7 @@ export async function recognizePage(pdf: PDFDocumentProxy, bookId: string, n: nu
       for (const line of paragraph.lines) {
         const words = line.words.filter((w) => w.text.trim() && w.confidence >= MIN_CONFIDENCE).map((w) => ({ text: w.text.trim(), box: frac(w.bbox) }))
         if (!words.length) continue
-        lines.push({ box: frac(line.bbox), words })
+        lines.push({ box: frac(line.bbox), words, size: line.rowAttributes?.rowHeight ? line.rowAttributes.rowHeight / H : undefined })
         confidence += line.confidence
         counted++
       }

@@ -715,6 +715,7 @@ const SHORTCUTS: [string[], string][] = [
   [['D'], 'Two pages'],
   [['V'], 'Scroll direction'],
   [['M'], 'Margin notes'],
+  [['R', '⇧R'], 'Rotate right / left'],
   [['B'], 'Bookmark page'],
   [['H'], 'Highlight selection'],
   [['/'], 'Search in book'],

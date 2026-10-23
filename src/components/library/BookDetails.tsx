@@ -1,6 +1,8 @@
 import { useState, type ReactNode } from 'react'
-import { BookOpen, Download, Trash2 } from 'lucide-react'
-import { listHighlights, updateBook, type Book } from '../../lib/db'
+import { BookOpen, Download, Pause, Play, ScanText, Trash2 } from 'lucide-react'
+import { deleteOcrPages, listHighlights, updateBook, type Book } from '../../lib/db'
+import { useOcrPages, useOcrProgress } from '../../lib/hooks'
+import { pauseOcr, queueOcr } from '../../lib/ocr'
 import { downloadText, notesToMarkdown, safeFileName } from '../../lib/export'
 import { bookProgress, formatBytes, formatDuration, formatRelative } from '../../lib/format'
 import { navigate } from '../../lib/router'
@@ -73,6 +75,8 @@ export function BookDetailsSheet({ book, annotationCount, onClose, onDelete }: {
         <Toggle label="Archived" hint="Hidden from your shelves, nothing is deleted" checked={!!book.archivedAt} onChange={(a) => setArchived(book, a, toast)} />
       </div>
 
+      <TextRecognition book={book} />
+
       <dl className="grid grid-cols-2 gap-x-4 gap-y-4 border-t border-line py-6 text-sm">
         <Stat label="Pages">{book.pageCount}</Stat>
         <Stat label="Time reading">{book.readingSeconds ? formatDuration(book.readingSeconds) : '—'}</Stat>
@@ -93,6 +97,57 @@ export function BookDetailsSheet({ book, annotationCount, onClose, onDelete }: {
         </Button>
       </div>
     </Sheet>
+  )
+}
+
+function TextRecognition({ book }: { book: Book }) {
+  const pages = useOcrPages(book.id)
+  const progress = useOcrProgress(book.id)
+  const running = book.ocr === 'queued'
+  const counts = progress && progress.total ? `${progress.done} of ${progress.total} pages` : null
+
+  let status: string
+  if (running) status = counts ? `Reading pages… ${counts}` : 'Getting ready…'
+  else if (book.ocr === 'paused') status = progress?.state === 'error' ? `Stopped: ${progress.message ?? 'something went wrong'}` : `Paused${counts ? ` at ${counts}` : ''}.`
+  else if (book.ocr === 'done') status = pages.size ? `Text recognised on ${pages.size} page${pages.size === 1 ? '' : 's'}.` : 'Every page already had text of its own.'
+  else status = 'For scans, photos and lecture notes whose text you can’t select. Runs on this device; nothing is uploaded.'
+
+  const again = async () => {
+    await deleteOcrPages(book.id)
+    await queueOcr(book.id)
+  }
+
+  return (
+    <section className="border-t border-line py-6">
+      <h4 className="flex items-center gap-2 text-[0.68rem] font-bold tracking-wide text-muted uppercase">
+        <ScanText className="size-3.5" /> Text recognition
+      </h4>
+      <p className="mt-2 text-sm leading-relaxed text-ink/80">{status}</p>
+      {running && progress && progress.total > 0 && (
+        <div className="mt-2 h-1 overflow-hidden rounded-full bg-line">
+          <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${(progress.done / progress.total) * 100}%` }} />
+        </div>
+      )}
+      <div className="mt-3 flex gap-2">
+        {running ? (
+          <Button size="sm" onClick={() => pauseOcr(book.id)}>
+            <Pause className="size-3.5" /> Pause
+          </Button>
+        ) : book.ocr === 'paused' ? (
+          <Button size="sm" onClick={() => queueOcr(book.id)}>
+            <Play className="size-3.5" /> Resume
+          </Button>
+        ) : book.ocr === 'done' ? (
+          <Button size="sm" onClick={again}>
+            <ScanText className="size-3.5" /> Recognise again
+          </Button>
+        ) : (
+          <Button size="sm" onClick={() => queueOcr(book.id)}>
+            <ScanText className="size-3.5" /> Recognise text
+          </Button>
+        )}
+      </div>
+    </section>
   )
 }
 

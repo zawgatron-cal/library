@@ -54,7 +54,8 @@ export type Rect = { x: number; y: number; w: number; h: number }
 
 /** A word found by text recognition, positioned on the unrotated page. */
 export type OcrWord = { text: string; box: Rect }
-export type OcrLine = { box: Rect; words: OcrWord[] }
+/** `size` is the type size as a fraction of the page height, as Tesseract measures it. */
+export type OcrLine = { box: Rect; words: OcrWord[]; size?: number }
 
 export type OcrPage = {
   /** `${bookId}:${page}` */

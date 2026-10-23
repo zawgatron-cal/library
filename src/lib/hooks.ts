@@ -52,10 +52,6 @@ export function useOcrProgress(bookId: string) {
   return useSyncExternalStore(subscribeOcrProgress, ocrProgressSnapshot).get(bookId)
 }
 
-export function useAllOcrProgress() {
-  return useSyncExternalStore(subscribeOcrProgress, ocrProgressSnapshot)
-}
-
 export function useLocalStorage<T extends object>(key: string, initial: T) {
   const [value, setValue] = useState<T>(() => {
     try {
