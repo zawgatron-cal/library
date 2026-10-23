@@ -31,9 +31,9 @@ Get the latest version from the [Releases page](https://github.com/zawgatron-cal
 
 The `arm64` AppImage and deb are for Linux on ARM.
 
-**First launch.** Library isn't signed with a paid Apple or Microsoft developer certificate yet, so your system checks with you the first time you open it:
+**First launch.** Library isn't signed with a paid Apple or Microsoft developer certificate yet, so your system checks with you the first time you open it.
 
-- **macOS**: drag Library into Applications and open it. When macOS says it can't verify the developer, go to **System Settings → Privacy & Security** and click **Open Anyway**.
+- **macOS — “can't verify” / “malware” message:** This is Gatekeeper, not a virus scan. After you drag Library into **Applications**, **control-click Library → Open → Open** (do not double-click the first time). Or double-click once, cancel the alert, then **System Settings → Privacy & Security → Open Anyway**. Full steps: [`docs/INSTALL-macos.md`](docs/INSTALL-macos.md).
 - **Windows**: if SmartScreen says "Windows protected your PC", click **More info → Run anyway**.
 - **Linux**: make the AppImage executable (`chmod +x Library-*.AppImage`) and run it, or install the deb with `sudo apt install ./Library-*.deb`.
 

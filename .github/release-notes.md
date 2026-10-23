@@ -13,7 +13,7 @@
 
 Library isn't signed with a paid Apple or Microsoft developer certificate yet, so your system asks before opening it the first time.
 
-- **macOS**: open the `.dmg`, drag Library into Applications, then open it. When macOS says it can't verify the developer, open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**. You only need to do this once.
+- **macOS**: If you see **“Apple cannot verify…”** or **“free from malware”**, that is normal for unsigned open-source apps — it is not saying malware was found. Open the `.dmg`, drag **Library** into **Applications**, then in Finder **control-click Library → Open → Open** (first launch only; do not double-click yet). Alternative: try opening once, cancel, then **System Settings → Privacy & Security → Open Anyway**. Details: [Install on macOS](https://github.com/zawgatron-cal/textbook/blob/main/docs/INSTALL-macos.md).
 - **Windows**: if SmartScreen says "Windows protected your PC", click **More info → Run anyway**.
 - **Linux (AppImage)**: make it executable (`chmod +x Library-*.AppImage`, or Properties → Permissions) and double-click it.
 - **Linux (deb)**: `sudo apt install ./Library-*.deb`, then find Library in your applications.
