@@ -7,7 +7,7 @@
 <p align="center">
   A light-weight, cozy, open-source PDF reader for reading and studying, kept entirely on your own computer.
   <br />
-  <a href="https://github.com/zawgatron-cal/textbook/releases/latest"><strong>Download for macOS, Windows or Linux</strong></a>
+  <a href="https://github.com/zawgatron-cal/library/releases/latest"><strong>Download for macOS, Windows or Linux</strong></a>
 </p>
 
 Library is built around one idea: reading should feel handcrafted. Soft themes, warm paper tones, gentle typography, and a quiet interface that gets out of the way so you can sink into a book, a paper, or a course reader.
@@ -19,7 +19,7 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 
 ## Download
 
-Get the latest version from the [Releases page](https://github.com/zawgatron-cal/textbook/releases/latest).
+Get the latest version from the [Releases page](https://github.com/zawgatron-cal/library/releases/latest).
 
 | System | File |
 | --- | --- |
@@ -117,7 +117,7 @@ Uninstalling the app leaves it in place. To start over, delete that folder.
 You need [Node.js](https://nodejs.org) 22 or later.
 
 ```bash
-git clone https://github.com/zawgatron-cal/textbook.git library
+git clone https://github.com/zawgatron-cal/library.git library
 cd library
 npm install
 npm run dev        # the web version at http://localhost:5173
