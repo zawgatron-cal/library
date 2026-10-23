@@ -83,6 +83,29 @@ function viewportSize(page: PDFPageProxy) {
   return { w: vp.width, h: vp.height }
 }
 
+/**
+ * Find the pages that aren't the size of page 1 (fold-outs, landscape tables, covers). Most books have none, so the
+ * reader lays out with page 1's size at once and this runs afterwards in small batches, out of the way of the pages
+ * being drawn. The result is saved, so it only happens the first time a book is opened.
+ */
+async function measurePages(doc: PDFDocumentProxy, first: PageSize) {
+  await new Promise((resolve) => setTimeout(resolve, 1200))
+  const odd: Record<number, [number, number, number]> = {}
+  try {
+    for (let start = 2; start <= doc.numPages; start += 24) {
+      const batch = Array.from({ length: Math.min(24, doc.numPages - start + 1) }, (_, i) => start + i)
+      for (const page of await Promise.all(batch.map((n) => doc.getPage(n)))) {
+        const { w, h } = viewportSize(page)
+        if (Math.abs(w - first.w) > 0.5 || Math.abs(h - first.h) > 0.5 || page.rotate !== first.rotate) odd[page.pageNumber] = [w, h, page.rotate]
+      }
+      await new Promise((resolve) => setTimeout(resolve, 16))
+    }
+  } catch {
+    return null
+  }
+  return odd
+}
+
 function isTyping(target: EventTarget | null) {
   const el = target as HTMLElement | null
   return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable)
@@ -170,19 +193,21 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     async (doc: PDFDocumentProxy) => {
       setPdf(doc)
       doc.getPageLabels().then(setPageLabels, () => setPageLabels(null))
-      // Lay out with the first page's size straight away (most books are uniform), then correct any odd pages.
       const firstPage = await doc.getPage(1)
       const first = { ...viewportSize(firstPage), rotate: firstPage.rotate }
-      setBaseSizes(Array.from({ length: doc.numPages }, () => first))
-      const sizes = await Promise.all(
-        Array.from({ length: doc.numPages }, async (_, i) => {
-          const page = await doc.getPage(i + 1)
-          return { ...viewportSize(page), rotate: page.rotate }
-        }),
-      )
-      if (sizes.some((s) => s.w !== first.w || s.h !== first.h || s.rotate !== first.rotate)) setBaseSizes(sizes)
+      const withOdd = (odd: Record<number, [number, number, number]>) =>
+        Array.from({ length: doc.numPages }, (_, i) => (odd[i + 1] ? { w: odd[i + 1][0], h: odd[i + 1][1], rotate: odd[i + 1][2] } : first))
+      setBaseSizes(withOdd(book.oddPages ?? {}))
+      if (!book.oddPages) {
+        const odd = await measurePages(doc, first)
+        if (!odd) return
+        if (Object.keys(odd).length) setBaseSizes(withOdd(odd))
+        updateBook(book.id, { oddPages: odd })
+      }
       if (doc.numPages !== book.pageCount) updateBook(book.id, { pageCount: doc.numPages })
     },
+    // Sizes are only read once, when the document loads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [book.id, book.pageCount],
   )
 

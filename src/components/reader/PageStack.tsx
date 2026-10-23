@@ -137,6 +137,12 @@ export function PageStack(props: Props) {
   const anchor = useRef<Anchor>({ page: initialPosition?.page ?? 1, offset: initialPosition?.offset ?? 0, crossFrac: 0.5, viewMain: -1, viewCross: -1 })
   const frame = useRef(0)
   const renderScale = useDebounced(scale, 220)
+  // Pages kept ready just off screen draw a little after the ones in view, so those come first.
+  const [nearbyScale, setNearbyScale] = useState<number | null>(null)
+  useEffect(() => {
+    const timer = setTimeout(() => setNearbyScale(renderScale), 450)
+    return () => clearTimeout(timer)
+  }, [renderScale])
 
   const viewMain = vertical ? viewport.height : viewport.width
   const viewCross = vertical ? viewport.width : viewport.height
@@ -384,6 +390,7 @@ export function PageStack(props: Props) {
   if (cells.length && viewMain) {
     for (let i = cellIndexAt(cells, viewport.scroll - buffer); i < cells.length && cells[i].start <= viewport.scroll + viewMain + buffer; i++) visible.push(cells[i])
   }
+  const inView = new Set(visible.filter((c) => c.start < viewport.scroll + viewMain && c.start + c.size > viewport.scroll).flatMap((c) => c.pages))
 
   return (
     <div
@@ -429,7 +436,7 @@ export function PageStack(props: Props) {
                       pageNumber={p}
                       size={size}
                       scale={scale}
-                      renderScale={renderScale}
+                      renderScale={inView.has(p) ? renderScale : nearbyScale}
                       pageMode={pageMode}
                       highlights={pageHighlights}
                       activeHighlightId={activeHighlightId}
@@ -472,7 +479,8 @@ const PdfPage = memo(function PdfPage({
   pageNumber: number
   size: PageSize
   scale: number
-  renderScale: number
+  /** The scale to draw at; null holds off drawing for now. */
+  renderScale: number | null
   pageMode: PageMode
   highlights?: Highlight[]
   activeHighlightId: string | null
@@ -487,9 +495,9 @@ const PdfPage = memo(function PdfPage({
   const turned = extraRotation % 180 !== 0
   // The page on screen stays at its last crisp render (stretched to the new size) until the next render finishes,
   // so zooming never flashes blank.
-  const [shown, setShown] = useState(renderScale)
+  const [shown, setShown] = useState<number | null>(null)
   const [painted, setPainted] = useState(false)
-  const layers = shown === renderScale ? [shown] : [shown, renderScale]
+  const layers = [...new Set([shown, renderScale])].filter((s): s is number => s !== null)
 
   return (
     <div data-page={pageNumber} className="pdf-page group/page shadow-soft" style={{ width: size.w * scale, height: size.h * scale }}>
@@ -501,8 +509,8 @@ const PdfPage = memo(function PdfPage({
             width: size.w * layerScale,
             height: size.h * layerScale,
             transform: `scale(${scale / layerScale})`,
-            opacity: layerScale === shown ? 1 : 0,
-            pointerEvents: layerScale === shown ? undefined : 'none',
+            opacity: layerScale === shown || shown === null ? 1 : 0,
+            pointerEvents: layerScale === shown || shown === null ? undefined : 'none',
           }}
         >
           <Page

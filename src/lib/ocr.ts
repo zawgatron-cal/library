@@ -2,7 +2,7 @@ import type { PDFDocumentProxy } from 'pdfjs-dist'
 import type { Worker } from 'tesseract.js'
 import { getBook, getBookFile, listBooks, listOcrPages, putOcrPage, subscribe, updateBook, type OcrLine, type OcrPage } from './db'
 import { normalizeRotation, unrotateRect } from './geometry'
-import { documentOptions, pageHasText, pdfjs } from './pdf'
+import { backgroundPdfWorker, documentOptions, pageHasText, pdfjs } from './pdf'
 
 /*
   Text recognition runs entirely in the browser: pdf.js renders each page without a text layer to a canvas, and
@@ -121,7 +121,7 @@ async function processBook(bookId: string) {
   const file = await getBookFile(bookId)
   if (!book || !file) return
   setProgress({ bookId, done: 0, total: 0, state: 'starting' })
-  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), ...documentOptions }).promise
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()), ...documentOptions, worker: backgroundPdfWorker() }).promise
   try {
     const stored = new Map((await listOcrPages(bookId)).map((p) => [p.page, p]))
     const needed: number[] = []

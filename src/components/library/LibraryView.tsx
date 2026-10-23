@@ -117,7 +117,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         <input
           ref={fileInput}
           type="file"
-          accept="application/pdf,.pdf"
+          accept=".pdf"
           multiple
           hidden
           onChange={(e) => {

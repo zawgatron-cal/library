@@ -2,7 +2,18 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { pdfjs } from 'react-pdf'
 import { addBook, newId, type Book } from './db'
 
-pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+const workerUrl = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
+// One worker, started with the app and shared by every document, so opening a book doesn't wait for pdf.js to boot.
+if (typeof Worker !== 'undefined') pdfjs.GlobalWorkerOptions.workerPort = new Worker(workerUrl, { type: 'module' })
+
+let backgroundWorker: InstanceType<typeof pdfjs.PDFWorker> | null = null
+
+/** A second, long-lived worker for background jobs (text recognition), so they never queue behind the page you're reading. */
+export function backgroundPdfWorker() {
+  backgroundWorker ??= pdfjs.PDFWorker.create({ port: new Worker(workerUrl, { type: 'module' }) })
+  return backgroundWorker
+}
 
 export { pdfjs }
 

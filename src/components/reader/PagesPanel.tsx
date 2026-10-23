@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { Page } from 'react-pdf'
 import { Columns2, Columns3, RotateCw } from 'lucide-react'
@@ -31,6 +31,7 @@ export function PagesPanel({ pdf, book, highlights, currentPage, pageSizes, page
   const grid = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const [near, setNear] = useState<Set<number>>(() => new Set())
+  const [painted, setPainted] = useState<Set<number>>(() => new Set())
 
   const pageCount = pageSizes?.length ?? book.pageCount
   const bookmarked = useMemo(() => new Set(book.bookmarks.map((b) => b.page)), [book.bookmarks])
@@ -65,12 +66,27 @@ export function PagesPanel({ pdf, book, highlights, currentPage, pageSizes, page
           }
           return next
         })
+        const left = entries.filter((e) => !e.isIntersecting).map((e) => Number((e.target as HTMLElement).dataset.thumb))
+        if (left.length)
+          setPainted((prev) => {
+            const next = new Set(prev)
+            left.forEach((page) => next.delete(page))
+            return next
+          })
       },
       { root, rootMargin: '600px 0px' },
     )
     el.querySelectorAll('[data-thumb]').forEach((tile) => observer.observe(tile))
     return () => observer.disconnect()
   }, [tileW, pageCount])
+
+  // Thumbnails draw a couple at a time, nearest the current page first. Drawing them all at once would stall the
+  // reader for a moment every time the panel opens or scrolls.
+  const rendering = useMemo(() => {
+    const waiting = [...near].filter((p) => !painted.has(p)).sort((a, b) => Math.abs(a - currentPage) - Math.abs(b - currentPage))
+    return new Set([...[...near].filter((p) => painted.has(p)), ...waiting.slice(0, 2)])
+  }, [near, painted, currentPage])
+  const onPainted = useCallback((page: number) => setPainted((prev) => new Set(prev).add(page)), [])
 
   // Keep the page being read in view as you read; scrolling the grid yourself is left alone.
   const firstScroll = useRef(true)
@@ -105,7 +121,8 @@ export function PagesPanel({ pdf, book, highlights, currentPage, pageSizes, page
                 width={tileW}
                 height={Math.round((tileW * size.h) / size.w)}
                 rotate={((size.rotate ?? 0) + (rotations[i] ?? 0)) % 360}
-                render={near.has(page)}
+                render={rendering.has(page)}
+                onPainted={onPainted}
                 current={page === currentPage}
                 bookmarked={bookmarked.has(page)}
                 annotations={annotationCounts.get(page) ?? 0}
@@ -135,6 +152,7 @@ const Thumb = memo(function Thumb({
   rotate,
   onJump,
   onRotate,
+  onPainted,
 }: {
   pdf: PDFDocumentProxy | null
   page: number
@@ -149,6 +167,7 @@ const Thumb = memo(function Thumb({
   rotate: number
   onJump: (page: number) => void
   onRotate: (page: number) => void
+  onPainted: (page: number) => void
 }) {
   const [painted, setPainted] = useState(false)
   return (
@@ -175,7 +194,11 @@ const Thumb = memo(function Thumb({
             loading={null}
             renderTextLayer={false}
             renderAnnotationLayer={false}
-            onRenderSuccess={() => setPainted(true)}
+            onRenderSuccess={() => {
+              setPainted(true)
+              onPainted(page)
+            }}
+            onRenderError={() => onPainted(page)}
           />
         )}
         <div className="page-veil" data-painted={render && painted} />

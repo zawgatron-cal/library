@@ -40,6 +40,8 @@ export type Book = {
   rotation?: number
   /** Extra clockwise rotation of individual pages (on top of the view's), in degrees. */
   pageRotations?: Record<number, number>
+  /** Pages whose size or built-in rotation differs from page 1, as [width, height, rotate]. Missing until measured. */
+  oddPages?: Record<number, [number, number, number]>
 }
 
 export type OcrStatus = 'queued' | 'paused' | 'done'
