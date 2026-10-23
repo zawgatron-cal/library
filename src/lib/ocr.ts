@@ -15,6 +15,8 @@ const ASSETS = `${import.meta.env.BASE_URL}tesseract`
 /** Longest side of the image handed to Tesseract; about 250 dpi for a letter-size page. */
 const RENDER_SIZE = 2400
 const MIN_CONFIDENCE = 35
+/** Pages recognised at least this confidently are not read again just because they were turned. */
+export const GOOD_CONFIDENCE = 70
 
 export type OcrProgress = { bookId: string; done: number; total: number; state: 'starting' | 'running' | 'finished' | 'error'; message?: string }
 
@@ -126,7 +128,7 @@ async function processBook(bookId: string) {
     for (let n = 1; n <= pdf.numPages; n++) {
       const rotation = normalizeRotation(book.pageRotations?.[n] ?? 0)
       const existing = stored.get(n)
-      if (existing && existing.rotation === rotation) continue
+      if (existing && (existing.rotation === rotation || existing.confidence >= GOOD_CONFIDENCE)) continue
       if (!existing && (await pageHasText(await pdf.getPage(n)))) continue
       needed.push(n)
     }
@@ -145,7 +147,7 @@ async function processBook(bookId: string) {
       let result = await recognizePage(pdf, bookId, n, normalizeRotation(chosen ?? 0))
       // A page that reads as gibberish may have been scanned sideways: try the other ways up, and if one reads
       // clearly better, keep it and turn the page upright. Pages the reader has rotated themselves are left alone.
-      if (chosen === undefined && result.confidence < 70) {
+      if (chosen === undefined && result.confidence < GOOD_CONFIDENCE) {
         for (const rotation of [90, 270, 180]) {
           const attempt = await recognizePage(pdf, bookId, n, rotation)
           if (attempt.confidence > result.confidence) result = attempt
@@ -157,7 +159,9 @@ async function processBook(bookId: string) {
           result = await recognizePage(pdf, bookId, n, 0)
         }
       }
-      await putOcrPage(result)
+      // Turning a page the reader can already read shouldn't trade good text for a sideways reading of it.
+      const previous = stored.get(n)
+      if (!previous || result.confidence >= previous.confidence) await putOcrPage(result)
       done++
       setProgress({ bookId, done, total, state: 'running' })
     }

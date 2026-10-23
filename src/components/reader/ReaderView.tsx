@@ -7,7 +7,7 @@ import { ArrowLeft, Bookmark, BookCheck, BookOpen, ChevronLeft, ChevronRight, Co
 import { getBookFile, newId, putHighlight, updateBook, type Book, type Highlight, type HighlightColor, type ReadingPosition } from '../../lib/db'
 import { useBook, useHighlights, useLocalStorage, useOcrPages, useOcrProgress } from '../../lib/hooks'
 import { extraRotation, normalizeRotation, rotateRect } from '../../lib/geometry'
-import { focusOcr, pauseOcr, queueOcr, type OcrProgress } from '../../lib/ocr'
+import { GOOD_CONFIDENCE, focusOcr, pauseOcr, queueOcr, type OcrProgress } from '../../lib/ocr'
 import { documentOptions, looksScanned } from '../../lib/pdf'
 import { navigate } from '../../lib/router'
 import { useSettings } from '../../lib/settings'
@@ -121,20 +121,42 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     () => Array.from({ length: pageCount }, (_, i) => extraRotation({ rotation: book.rotation, pageRotations: book.pageRotations }, i + 1)),
     [pageCount, book.rotation, book.pageRotations],
   )
-  /** Page sizes as shown, with sideways pages' width and height swapped. */
-  const pageSizes = useMemo(() => baseSizes?.map((s, i) => (rotations[i] % 180 ? { ...s, w: s.h, h: s.w } : s)) ?? null, [baseSizes, rotations])
+  /**
+   * Page sizes as shown, with sideways pages' width and height swapped. A single page turned on its side is scaled
+   * down to fit the space its neighbours take, like a fold-out plate, rather than spilling out of the view.
+   */
+  const pageSizes = useMemo(() => {
+    if (!baseSizes) return null
+    const shown = baseSizes.map((s, i) => (rotations[i] % 180 ? { ...s, w: s.h, h: s.w } : s))
+    const turned = (i: number) => normalizeRotation(book.pageRotations?.[i + 1] ?? 0) % 180 !== 0
+    const upright = shown.filter((_, i) => !turned(i))
+    if (upright.length === shown.length || !upright.length) return shown
+    const median = (xs: number[]) => xs.sort((a, b) => a - b)[Math.floor(xs.length / 2)]
+    const typicalW = median(upright.map((s) => s.w))
+    const typicalH = median(upright.map((s) => s.h))
+    return shown.map((s, i) => {
+      if (!turned(i)) return s
+      const fit =
+        settings.pageLayout !== 'continuous'
+          ? Math.min(typicalW / s.w, typicalH / s.h)
+          : settings.scrollDirection === 'vertical'
+            ? typicalW / s.w
+            : typicalH / s.h
+      return fit < 1 ? { ...s, w: s.w * fit, h: s.h * fit, fit } : s
+    })
+  }, [baseSizes, rotations, book.pageRotations, settings.pageLayout, settings.scrollDirection])
 
   const rotateView = useCallback((by: 90 | -90) => updateBook(book.id, (b) => ({ rotation: normalizeRotation((b.rotation ?? 0) + by) })), [book.id])
   const rotatePage = useCallback(
     (page: number) => {
       updateBook(book.id, (b) => ({ pageRotations: { ...b.pageRotations, [page]: normalizeRotation((b.pageRotations?.[page] ?? 0) + 90) } }))
-      // Recognised text was read the old way up; read the page again the new way.
-      if (ocrPages.has(page)) queueOcr(book.id)
+      // Text that was read poorly may have been read sideways; try again the new way up.
+      if ((ocrPages.get(page)?.confidence ?? 100) < GOOD_CONFIDENCE) queueOcr(book.id)
     },
     [book.id, ocrPages],
   )
   const resetRotation = useCallback(() => {
-    const reread = Object.keys(book.pageRotations ?? {}).some((p) => ocrPages.has(Number(p)))
+    const reread = Object.keys(book.pageRotations ?? {}).some((p) => (ocrPages.get(Number(p))?.confidence ?? 100) < GOOD_CONFIDENCE)
     updateBook(book.id, { rotation: 0, pageRotations: {} }).then(() => {
       if (reread) queueOcr(book.id)
     })

@@ -512,7 +512,7 @@ const PdfPage = memo(function PdfPage({
         >
           <Page
             pageNumber={pageNumber}
-            scale={layerScale}
+            scale={layerScale * (size.fit ?? 1)}
             rotate={rotate}
             loading={null}
             customTextRenderer={textRenderer}

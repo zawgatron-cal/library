@@ -26,7 +26,10 @@ Library is built around one idea: reading should feel handcrafted. Soft themes, 
 - Your **place is remembered** in every book, along with its zoom level.
 - **Page thumbnails** in the sidebar for skimming, marked with bookmarks and annotation counts.
 - **Table of contents** from the PDF outline: a collapsible tree that follows the current chapter, with _Show all_ / _Collapse all_ and a filter for long outlines.
+- **Automatic contents** for PDFs that don't have any. Headings are found from type size and patterns like _Chapter 3_, _Lecture 4: …_ or _2.1 Methods_, and running headers are skipped. This works on scanned pages too, once their text has been recognised.
+- **Rotate** the whole view (<kbd>R</kbd> / <kbd>Shift R</kbd>) or a single page with the button in its corner. Annotations and recognised text turn with the page.
 - **Full-text search** with in-page match marks.
+- **Text recognition (OCR)** for scans, photographed pages and lecture slides that are only images. Library notices when a PDF has no text and reads it in the background, starting from the page you're on. Afterwards you can select, highlight and search the text like any other PDF. Sideways pages are detected and turned upright. Recognition runs entirely on your device with a bundled English model ([Tesseract](https://github.com/naptha/tesseract.js)). It handles printed and typed text well; handwriting is hit-and-miss. Start, pause or redo it from a book's details.
 - **Focus mode** hides everything except the page.
 - **Keyboard shortcuts** for everything (press <kbd>?</kbd> in the reader).
 
@@ -74,6 +77,7 @@ Then open http://localhost:5173 and drop in a PDF.
 | <kbd>D</kbd>             | Two pages              |
 | <kbd>V</kbd>             | Scroll direction       |
 | <kbd>M</kbd>             | Margin notes           |
+| <kbd>R</kbd> / <kbd>Shift R</kbd> | Rotate right / left |
 | <kbd>B</kbd>             | Bookmark page          |
 | <kbd>H</kbd>             | Highlight selection    |
 | <kbd>/</kbd> or <kbd>Ctrl/⌘ F</kbd> | Search in book |
@@ -84,13 +88,16 @@ Then open http://localhost:5173 and drop in a PDF.
 
 ## How it's built
 
-React 19, TypeScript, Vite and Tailwind CSS v4, with [react-pdf](https://github.com/wojtekmaj/react-pdf) (pdf.js) for rendering and [idb](https://github.com/jakearchibald/idb) for storage. Screen changes use the View Transitions API where the browser supports it.
+React 19, TypeScript, Vite and Tailwind CSS v4, with [react-pdf](https://github.com/wojtekmaj/react-pdf) (pdf.js) for rendering, [tesseract.js](https://github.com/naptha/tesseract.js) for text recognition, and [idb](https://github.com/jakearchibald/idb) for storage. Screen changes use the View Transitions API where the browser supports it.
 
 ```
 src/
   lib/
-    db.ts           IndexedDB: books, PDF files, annotations
-    pdf.ts          pdf.js setup, import (metadata + cover)
+    db.ts           IndexedDB: books, PDF files, annotations, recognised text
+    pdf.ts          pdf.js setup, import (metadata + cover), scan detection
+    ocr.ts          Background text recognition queue
+    autoToc.ts      Contents from headings
+    geometry.ts     Page rotation maths
     themes.ts       Preset themes and colour helpers
     preferences.ts  Settings shape, fonts, defaults
     settings.tsx    Settings context; applies the theme as CSS variables
