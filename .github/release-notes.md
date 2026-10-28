@@ -13,6 +13,10 @@
 
 **1.0.1** (this build) includes the update checker. An earlier broken build of 1.0.1 could crash on launch with `Cannot find module './update.cjs'` — re-download from this release and replace the app in Applications. Your books stay put.
 
+## Fixes
+
+- Text selection no longer leaves accent-colored strips along the side of the page (pdf.js `<br>` selection styling).
+
 ## First launch
 
 Library isn't signed with a paid Apple or Microsoft developer certificate yet, so your system asks before opening it the first time.

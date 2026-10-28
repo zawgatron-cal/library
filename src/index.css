@@ -167,6 +167,9 @@ input[type='range'] {
 .pdf-page {
   position: relative;
   isolation: isolate;
+  /* overflow alone does not clip ::selection through a transformed .page-layer in Chrome. */
+  overflow: hidden;
+  clip-path: inset(0);
   background: white;
 }
 
@@ -281,6 +284,13 @@ input[type='range'] {
   background: color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
+/* Keep pdf.js's Chrome workaround: <br> selection boxes sit in the left margin and look like side
+ * artifacts if they pick up our accent ::selection (https://github.com/mozilla/pdf.js/issues/13840).
+ * Needs higher specificity than `.pdf-page .textLayer ::selection` above. */
+.pdf-page .textLayer br::selection {
+  background: transparent !important;
+}
+
 .pdf-page .textLayer mark {
   color: transparent;
   background: color-mix(in oklab, var(--accent) 38%, transparent);
@@ -298,7 +308,7 @@ input[type='range'] {
 /* A ribbon tucked into the top of bookmarked pages; a faint one appears on hover to add it. */
 .bookmark-ribbon {
   position: absolute;
-  top: -3px;
+  top: 0;
   right: 22px;
   z-index: 4;
   width: 18px;

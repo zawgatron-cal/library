@@ -508,7 +508,8 @@ const PdfPage = memo(function PdfPage({
           style={{
             width: size.w * layerScale,
             height: size.h * layerScale,
-            transform: `scale(${scale / layerScale})`,
+            // Avoid an identity transform: Chrome then fails to clip ::selection to the page.
+            transform: scale === layerScale ? undefined : `scale(${scale / layerScale})`,
             opacity: layerScale === shown || shown === null ? 1 : 0,
             pointerEvents: layerScale === shown || shown === null ? undefined : 'none',
           }}
