@@ -50,7 +50,7 @@ Uninstalling the app leaves it in place. To start over, delete that folder.
 - **Windows** and **Linux AppImage**: Library can download and install a newer version in the background, then ask you to restart.
 - **macOS** and **Linux `.deb`**: you get a dialog with a link to the right installer. In-app install on macOS needs an Apple Developer ID and notarization; until then, download the new `.dmg` like the first install.
 
-Version **1.0.0** does not include the updater; install **1.0.1** or later once to get update prompts.
+Install **1.0.2** or later. **1.0.1** crashes on launch (missing updater file); **1.0.0** has no update checks.
 
 ## Features
 
