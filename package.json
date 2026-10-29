@@ -1,7 +1,7 @@
 {
   "name": "library",
   "productName": "Library",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A light-weight, cozy, customizable PDF reader for reading and studying, on your own computer.",
   "author": {
     "name": "Library contributors",

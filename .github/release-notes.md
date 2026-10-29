@@ -9,13 +9,9 @@
 | **Linux** (Debian, Ubuntu, Mint, Pop!_OS) | `Library-…-linux-amd64.deb` |
 | **Linux** on ARM | the `arm64` AppImage or deb |
 
-## What’s new in 1.0.2
+## What’s new in 1.0.3
 
-- **Settings** sheet title (was “Make it yours”), with the subtitle removed.
-- **Delete / Backspace** removes the selected annotation. Delete only edits note text when the note field is focused.
-- **Type to note:** with text selected, start typing to highlight in the default colour and open a note. **Esc** cancels the draft; **⌘/Ctrl+Enter** saves.
-- Desktop right-click menu includes macOS **Look Up** (Dictionary) for selected text, plus Copy / Cut / Paste / Select All.
-- Softer bookish flourishes and a warmer UI wash; cozy themes kept (no outlined “continue” card).
+- **Smoother updates:** Library downloads new versions in the background on Windows, macOS, and Linux, then asks you to restart. No more hunting through GitHub Releases for the installer (macOS included, even while ad-hoc signed).
 
 ## First launch
 
