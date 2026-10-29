@@ -1,25 +1,28 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Document } from 'react-pdf'
-import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
-import { ArrowLeft, Bookmark, BookCheck, BookOpen, ChevronLeft, ChevronRight, CornerUpLeft, Keyboard, Maximize2, Minimize2, Minus, Pause, PanelLeft, PanelRight, Plus, ScanText, Settings2, X } from 'lucide-react'
+import { ArrowLeft, Bookmark, BookCheck, BookOpen, ChevronLeft, ChevronRight, CornerUpLeft, Keyboard, Maximize2, Minimize2, Minus, PanelLeft, PanelRight, Plus, ScanText, Settings2, X } from 'lucide-react'
 import { deleteHighlight, getBookFile, newId, putHighlight, updateBook, type Book, type Highlight, type HighlightColor, type ReadingPosition } from '../../lib/db'
 import { useBook, useHighlights, useLocalStorage, useOcrPages, useOcrProgress } from '../../lib/hooks'
 import { extraRotation, normalizeRotation, rotateRect } from '../../lib/geometry'
-import { GOOD_CONFIDENCE, focusOcr, pauseOcr, queueOcr, type OcrProgress } from '../../lib/ocr'
+import { GOOD_CONFIDENCE, focusOcr, pauseOcr, queueOcr } from '../../lib/ocr'
 import { documentOptions, looksScanned } from '../../lib/pdf'
 import { navigate } from '../../lib/router'
 import { useSettings } from '../../lib/settings'
 import { bookProgress } from '../../lib/format'
 import type { PageLayout } from '../../lib/preferences'
-import { Button, Dialog, IconButton, Kbd } from '../ui/primitives'
+import { Button, IconButton } from '../ui/primitives'
 import { useToast } from '../ui/toast'
 import { usePasswordPrompt } from '../ui/usePasswordPrompt'
 import { AnnotationPopover, type PopoverTarget } from './AnnotationPopover'
 import { GoToDialog } from './GoToDialog'
 import { clampZoom, fitScale, type PageSize } from './layout'
+import { measurePages, viewportSize } from './measurePages'
+import { OcrPill } from './OcrPill'
 import { PageStack, type PageStackHandle, type PendingSelection } from './PageStack'
+import { ShortcutsDialog } from './ShortcutsDialog'
 import { Sidebar, type SidebarTab } from './Sidebar'
 import { ViewMenu, ZoomControl } from './ViewControls'
 
@@ -78,34 +81,6 @@ function OpeningState() {
 const ZOOM_STEPS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4]
 /** PDF points → CSS pixels, so "100%" matches the printed size. */
 const PT_TO_PX = 96 / 72
-
-function viewportSize(page: PDFPageProxy) {
-  const vp = page.getViewport({ scale: 1 })
-  return { w: vp.width, h: vp.height }
-}
-
-/**
- * Find the pages that aren't the size of page 1 (fold-outs, landscape tables, covers). Most books have none, so the
- * reader lays out with page 1's size at once and this runs afterwards in small batches, out of the way of the pages
- * being drawn. The result is saved, so it only happens the first time a book is opened.
- */
-async function measurePages(doc: PDFDocumentProxy, first: PageSize) {
-  await new Promise((resolve) => setTimeout(resolve, 1200))
-  const odd: Record<number, [number, number, number]> = {}
-  try {
-    for (let start = 2; start <= doc.numPages; start += 24) {
-      const batch = Array.from({ length: Math.min(24, doc.numPages - start + 1) }, (_, i) => start + i)
-      for (const page of await Promise.all(batch.map((n) => doc.getPage(n)))) {
-        const { w, h } = viewportSize(page)
-        if (Math.abs(w - first.w) > 0.5 || Math.abs(h - first.h) > 0.5 || page.rotate !== first.rotate) odd[page.pageNumber] = [w, h, page.rotate]
-      }
-      await new Promise((resolve) => setTimeout(resolve, 16))
-    }
-  } catch {
-    return null
-  }
-  return odd
-}
 
 function isTyping(target: EventTarget | null) {
   const el = target as HTMLElement | null
@@ -780,76 +755,6 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
       )}
       {dialog === 'help' && <ShortcutsDialog onClose={() => setDialog(null)} />}
       {dialog === 'goto' && <GoToDialog pageCount={pageCount} currentPage={currentPage} labels={pageLabels} onGo={(p) => jump(p)} onClose={() => setDialog(null)} />}
-    </div>
-  )
-}
-
-const SHORTCUTS: [string[], string][] = [
-  [['→', 'J'], 'Next page'],
-  [['←', 'K'], 'Previous page'],
-  [['G'], 'Go to page…'],
-  [['⌫', 'Del'], 'Delete selected annotation'],
-  [['⌫'], 'Back after a jump'],
-  [['+', '−'], 'Zoom in / out'],
-  [['0'], 'Fit'],
-  [['D'], 'Two pages'],
-  [['V'], 'Scroll direction'],
-  [['M'], 'Margin notes'],
-  [['R', '⇧R'], 'Rotate right / left'],
-  [['B'], 'Bookmark page'],
-  [['H'], 'Highlight selection'],
-  [['A…'], 'Type to note on selection'],
-  [['⌘↵'], 'Save note'],
-  [['Esc'], 'Cancel note / close'],
-  [['/'], 'Search in book'],
-  [['T'], 'Toggle sidebar'],
-  [['P'], 'Page thumbnails'],
-  [['F'], 'Focus mode'],
-]
-
-function ShortcutsDialog({ onClose }: { onClose: () => void }) {
-  return (
-    <Dialog title="Keyboard shortcuts" onClose={onClose} width="max-w-lg">
-      <ul className="grid grid-cols-1 gap-x-8 gap-y-2.5 text-sm sm:grid-cols-2">
-        {SHORTCUTS.map(([keys, label]) => (
-          <li key={label} className="flex items-center justify-between gap-3">
-            <span>{label}</span>
-            <span className="flex gap-1">
-              {keys.map((k) => (
-                <Kbd key={k}>{k}</Kbd>
-              ))}
-            </span>
-          </li>
-        ))}
-      </ul>
-    </Dialog>
-  )
-}
-
-function OcrPill({ progress, onPause }: { progress?: OcrProgress; onPause: () => void }) {
-  const fraction = progress?.total ? progress.done / progress.total : 0
-  return (
-    <div className="absolute bottom-5 left-5 z-20 flex w-60 animate-rise flex-col gap-2 rounded-xl border border-line bg-surface px-3.5 py-3 shadow-soft">
-      <div className="flex items-center gap-2 text-xs">
-        <ScanText className="size-3.5 shrink-0 animate-pulse text-accent" />
-        <span className="flex-1 font-semibold">
-          Recognising text
-          {progress?.total ? (
-            <span className="font-normal text-muted">
-              {' '}
-              · {progress.done} of {progress.total} pages
-            </span>
-          ) : (
-            <span className="font-normal text-muted"> · getting ready</span>
-          )}
-        </span>
-        <button type="button" onClick={onPause} className="rounded p-0.5 text-muted hover:text-ink" aria-label="Pause text recognition" title="Pause">
-          <Pause className="size-3.5" />
-        </button>
-      </div>
-      <div className="h-1 overflow-hidden rounded-full bg-line">
-        <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${Math.max(3, fraction * 100)}%` }} />
-      </div>
     </div>
   )
 }

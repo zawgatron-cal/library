@@ -1,5 +1,5 @@
 # Builds the installers on macOS, Windows and Linux and publishes them as a GitHub release.
-# Start it by pushing a version tag (`git tag v1.0.1 && git push origin v1.0.1`), or from the Actions tab.
+# Start it by pushing a version tag (`git tag v1.0.2 && git push origin v1.0.2`), or from the Actions tab.
 name: Release
 
 on:

@@ -9,13 +9,13 @@
 | **Linux** (Debian, Ubuntu, Mint, Pop!_OS) | `Library-…-linux-amd64.deb` |
 | **Linux** on ARM | the `arm64` AppImage or deb |
 
-## Fix in this build
+## What’s new in 1.0.2
 
-**1.0.1** (this build) includes the update checker. An earlier broken build of 1.0.1 could crash on launch with `Cannot find module './update.cjs'` — re-download from this release and replace the app in Applications. Your books stay put.
-
-## Fixes
-
-- Text selection no longer leaves accent-colored strips along the side of the page (pdf.js `<br>` selection styling).
+- **Settings** sheet title (was “Make it yours”), with the subtitle removed.
+- **Delete / Backspace** removes the selected annotation. Delete only edits note text when the note field is focused.
+- **Type to note:** with text selected, start typing to highlight in the default colour and open a note. **Esc** cancels the draft; **⌘/Ctrl+Enter** saves.
+- Desktop right-click menu includes macOS **Look Up** (Dictionary) for selected text, plus Copy / Cut / Paste / Select All.
+- Softer bookish flourishes and a warmer UI wash; cozy themes kept (no outlined “continue” card).
 
 ## First launch
 

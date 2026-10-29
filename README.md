@@ -50,7 +50,7 @@ Uninstalling the app leaves it in place. To start over, delete that folder.
 - **Windows** and **Linux AppImage**: Library can download and install a newer version in the background, then ask you to restart.
 - **macOS** and **Linux `.deb`**: you get a dialog with a link to the right installer. In-app install on macOS needs an Apple Developer ID and notarization; until then, download the new `.dmg` like the first install.
 
-Use the current **1.0.1** build from Releases (re-download if an earlier 1.0.1 crashed with a missing `update.cjs`). **1.0.0** has no update checks.
+Use the current **1.0.2** build from Releases when published. **1.0.1** added update checks (re-download if an earlier 1.0.1 crashed with a missing `update.cjs`). **1.0.0** has no update checks.
 
 ## Features
 
@@ -152,7 +152,7 @@ macOS installers must be built on a Mac. Windows and Linux installers build anyw
 Pushing a version tag builds the installers on macOS, Windows and Linux with GitHub Actions and publishes them as a release:
 
 ```bash
-npm version 1.0.1          # bumps package.json and creates the tag v1.0.1
+npm version 1.0.2          # bumps package.json and creates the tag v1.0.2
 git push && git push --tags
 ```
 
