@@ -106,6 +106,9 @@ Use the current **1.0.1** build from Releases (re-download if an earlier 1.0.1 c
 | <kbd>G</kbd>             | Go to page             |
 | <kbd>Backspace</kbd> / <kbd>Delete</kbd> | Delete selected annotation |
 | <kbd>Backspace</kbd>     | Back after a jump      |
+| Type after selecting     | Highlight and start a note |
+| <kbd>⌘/Ctrl</kbd>+<kbd>Enter</kbd> | Save note        |
+| <kbd>Esc</kbd>           | Cancel note / close    |
 | <kbd>+</kbd> / <kbd>−</kbd> | Zoom in / out       |
 | <kbd>0</kbd>             | Fit                    |
 | <kbd>D</kbd>             | Two pages              |

@@ -408,6 +408,8 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
         return
       }
       if (dialog || isTyping(e.target) || mod || e.altKey) return
+      // Selection popover handles type-to-note (printable keys) itself.
+      if (popover?.kind === 'selection' && e.key.length === 1) return
       const horizontal = direction === 'horizontal'
       switch (e.key) {
         case 'ArrowRight':
@@ -772,6 +774,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
             setPopover(null)
             setActiveHighlightId(null)
           }}
+          onHighlightCreated={(highlight) => setActiveHighlightId(highlight.id)}
           onCopied={() => toast('Copied to clipboard')}
         />
       )}
@@ -795,11 +798,13 @@ const SHORTCUTS: [string[], string][] = [
   [['R', '⇧R'], 'Rotate right / left'],
   [['B'], 'Bookmark page'],
   [['H'], 'Highlight selection'],
+  [['A…'], 'Type to note on selection'],
+  [['⌘↵'], 'Save note'],
+  [['Esc'], 'Cancel note / close'],
   [['/'], 'Search in book'],
   [['T'], 'Toggle sidebar'],
   [['P'], 'Page thumbnails'],
   [['F'], 'Focus mode'],
-  [['Esc'], 'Close / exit focus'],
 ]
 
 function ShortcutsDialog({ onClose }: { onClose: () => void }) {
