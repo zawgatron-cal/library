@@ -55,15 +55,26 @@ export function AnnotationPopover({
     setPos({ left, top })
   }, [target.anchor.x, target.anchor.y, showNote])
 
-  // Focus the note field at the end of the seeded text (avoids first-char landing at the caret start).
+  // Only autofocus for type-to-note drafts. Clicking an existing annotation must leave
+  // focus outside the textbox so Delete/Backspace still removes the highlight.
   useLayoutEffect(() => {
-    if (!showNote) return
+    if (!showNote || !draft) return
     const ta = taRef.current
     if (!ta) return
     ta.focus({ preventScroll: true })
     const len = ta.value.length
     ta.setSelectionRange(len, len)
-  }, [showNote])
+  }, [showNote, draft])
+
+  const focusNoteField = () => {
+    requestAnimationFrame(() => {
+      const ta = taRef.current
+      if (!ta) return
+      ta.focus({ preventScroll: true })
+      const len = ta.value.length
+      ta.setSelectionRange(len, len)
+    })
+  }
 
   const text = target.kind === 'highlight' ? target.highlight.text : target.text
 
@@ -134,6 +145,7 @@ export function AnnotationPopover({
       setEditing(created)
     }
     setShowNote(true)
+    focusNoteField()
   }
 
   const saveNote = async () => {
