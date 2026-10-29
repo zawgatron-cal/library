@@ -88,7 +88,7 @@ Use the current **1.0.1** build from Releases (re-download if an earlier 1.0.1 c
 - **Notes**: a lined notepad for each book, with one-click page references.
 - **Export** annotations, notes and bookmarks to Markdown.
 
-### Make it yours
+### Settings
 
 - **Eight themes** for a study by day or a library after hours. Each is a quiet, near-monotone palette: an accent for buttons and ribbons, and a softer flourish from the same family for progress and gilt details.
   - Light: _Parchment_ (walnut and sand), _Sage_ (pale greens), _Mist_ (blue-greys) and _Marble_ (grey stone and verdigris).
@@ -104,6 +104,7 @@ Use the current **1.0.1** build from Releases (re-download if an earlier 1.0.1 c
 | <kbd>→</kbd> / <kbd>J</kbd> | Next page           |
 | <kbd>←</kbd> / <kbd>K</kbd> | Previous page       |
 | <kbd>G</kbd>             | Go to page             |
+| <kbd>Backspace</kbd> / <kbd>Delete</kbd> | Delete selected annotation |
 | <kbd>Backspace</kbd>     | Back after a jump      |
 | <kbd>+</kbd> / <kbd>−</kbd> | Zoom in / out       |
 | <kbd>0</kbd>             | Fit                    |

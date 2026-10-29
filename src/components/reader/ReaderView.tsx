@@ -4,7 +4,7 @@ import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 import { ArrowLeft, Bookmark, BookCheck, BookOpen, ChevronLeft, ChevronRight, CornerUpLeft, Keyboard, Maximize2, Minimize2, Minus, Pause, PanelLeft, PanelRight, Plus, ScanText, Settings2, X } from 'lucide-react'
-import { getBookFile, newId, putHighlight, updateBook, type Book, type Highlight, type HighlightColor, type ReadingPosition } from '../../lib/db'
+import { deleteHighlight, getBookFile, newId, putHighlight, updateBook, type Book, type Highlight, type HighlightColor, type ReadingPosition } from '../../lib/db'
 import { useBook, useHighlights, useLocalStorage, useOcrPages, useOcrProgress } from '../../lib/hooks'
 import { extraRotation, normalizeRotation, rotateRect } from '../../lib/geometry'
 import { GOOD_CONFIDENCE, focusOcr, pauseOcr, queueOcr, type OcrProgress } from '../../lib/ocr'
@@ -484,8 +484,19 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           setDialog('goto')
           break
         case 'Backspace':
-          goBack()
+        case 'Delete': {
+          const id = activeHighlightId ?? (popover?.kind === 'highlight' ? popover.highlight.id : null)
+          if (id) {
+            e.preventDefault()
+            void deleteHighlight(id).then(() => {
+              setPopover(null)
+              setActiveHighlightId(null)
+            })
+          } else if (e.key === 'Backspace') {
+            goBack()
+          }
           break
+        }
         case 'h':
           if (popover?.kind === 'selection') {
             popover.create('sun').then(() => window.getSelection()?.removeAllRanges())
@@ -504,7 +515,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, focus, dialog, goBack, rotateView])
+  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, activeHighlightId, focus, dialog, goBack, rotateView])
 
   /* ----- focus-mode chrome ----- */
 
@@ -774,6 +785,7 @@ const SHORTCUTS: [string[], string][] = [
   [['→', 'J'], 'Next page'],
   [['←', 'K'], 'Previous page'],
   [['G'], 'Go to page…'],
+  [['⌫', 'Del'], 'Delete selected annotation'],
   [['⌫'], 'Back after a jump'],
   [['+', '−'], 'Zoom in / out'],
   [['0'], 'Fit'],

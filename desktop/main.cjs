@@ -95,6 +95,37 @@ function createWindow() {
     if (/^(https?|mailto):/i.test(url)) shell.openExternal(url)
   })
 
+  // Right-click: Look Up (macOS Dictionary) when text is selected, plus standard edit actions.
+  win.webContents.on('context-menu', (_event, params) => {
+    const { editFlags, selectionText, isEditable } = params
+    const selected = selectionText?.trim() ?? ''
+    const items = []
+
+    if (isMac && selected) {
+      const label = selected.length > 25 ? `${selected.slice(0, 25)}…` : selected
+      items.push({
+        label: `Look Up “${label}”`,
+        click: () => win.webContents.showDefinitionForSelection(),
+      })
+      items.push({ type: 'separator' })
+    }
+
+    if (isEditable) {
+      items.push(
+        { role: 'undo', enabled: editFlags.canUndo },
+        { role: 'redo', enabled: editFlags.canRedo },
+        { type: 'separator' },
+        { role: 'cut', enabled: editFlags.canCut },
+      )
+    }
+    if (editFlags.canCopy) items.push({ role: 'copy' })
+    if (isEditable && editFlags.canPaste) items.push({ role: 'paste' })
+    if (editFlags.canSelectAll) items.push({ role: 'selectAll' })
+
+    if (items.length === 0) return
+    Menu.buildFromTemplate(items).popup({ window: win })
+  })
+
   win.loadURL(DEV_URL ?? `${ORIGIN}/index.html`)
   win.on('closed', () => (win = null))
   setupUpdates(win)

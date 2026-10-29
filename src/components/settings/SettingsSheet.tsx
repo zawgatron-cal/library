@@ -12,9 +12,7 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
   const { settings, update } = useSettings()
 
   return (
-    <Sheet title="Make it yours" onClose={onClose}>
-      <p className="-mt-1 mb-6 text-sm text-muted">Everything here is saved on this computer and applies instantly.</p>
-
+    <Sheet title="Settings" onClose={onClose}>
       <Section title="Theme">
         <ThemePicker />
       </Section>
