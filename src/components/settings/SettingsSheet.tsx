@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Palette, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useSettings } from '../../lib/settings'
 import { UI_FONTS, type PageLayout, type Roundness, type ScrollDirection, type UiFont } from '../../lib/preferences'
-import { flourishOf, type Theme, type ThemeColors } from '../../lib/themes'
+import { flourishOf, isDark, type Theme, type ThemeColors } from '../../lib/themes'
 import { formatBytes } from '../../lib/format'
 import { Button, Field, Segmented, Sheet, Toggle, inputClass } from '../ui/primitives'
 
@@ -94,8 +94,8 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
               ]}
             />
           </Field>
-          <Toggle label="Paper grain" hint="A faint matte texture, under 3% opacity." checked={settings.grain} onChange={(grain) => update({ grain })} />
-          <Toggle label="Reduce motion" hint="E-ink style: swap pages and panels instantly, no animation." checked={settings.reduceMotion} onChange={(reduceMotion) => update({ reduceMotion })} />
+          <Toggle label="Paper grain" hint="A faint texture, like real paper." checked={settings.grain} onChange={(grain) => update({ grain })} />
+          <Toggle label="Reduce motion" hint="Turn off animations and smooth scrolling." checked={settings.reduceMotion} onChange={(reduceMotion) => update({ reduceMotion })} />
         </div>
       </Section>
 
@@ -212,7 +212,7 @@ function ThemePicker() {
         <button
           type="button"
           onClick={() => createFrom(theme)}
-          className="folio-empty flex min-h-[5.5rem] flex-col items-center justify-center gap-1 text-sm font-semibold text-muted transition hover:text-ink"
+          className="flex min-h-[5.5rem] flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-line-strong text-sm font-semibold text-muted transition hover:border-accent hover:text-accent-strong"
         >
           <Plus className="size-4" />
           Create your own
@@ -273,21 +273,21 @@ function ThemeCard({ theme, active, onSelect, onEdit }: { theme: Theme; active: 
         type="button"
         onClick={onSelect}
         title={theme.blurb}
-        className={`w-full overflow-hidden border text-left transition ${active ? 'border-ink shadow-[2px_2px_0_color-mix(in_oklab,var(--ink)_45%,transparent)]' : 'border-ink/25 hover:border-ink/55'}`}
+        className={`w-full overflow-hidden rounded-lg border-2 text-left transition ${active ? 'border-accent shadow-soft' : 'border-transparent hover:border-line-strong'}`}
       >
-        <div className="flex h-14 gap-2 p-2" style={{ background: c.canvas }}>
-          <div className="flex flex-1 flex-col justify-center gap-1 border border-current/20 px-2 py-1.5" style={{ background: c.paper, color: c.ink }}>
-            <div className="h-0.5 w-3/4" style={{ background: c.ink, opacity: 0.85 }} />
-            <div className="h-0.5 w-full" style={{ background: c.muted, opacity: 0.55 }} />
-            <div className="h-0.5 w-2/3" style={{ background: c.muted, opacity: 0.55 }} />
+        <div className="flex h-14 gap-1.5 p-2" style={{ background: c.canvas }}>
+          <div className="flex-1 rounded-[0.35rem] p-1.5" style={{ background: c.paper, boxShadow: `0 1px 2px ${c.ink}22` }}>
+            <div className="mb-1 h-1 w-3/4 rounded-full" style={{ background: c.ink, opacity: isDark(c) ? 0.8 : 0.7 }} />
+            <div className="mb-1 h-1 w-full rounded-full" style={{ background: c.muted, opacity: 0.6 }} />
+            <div className="h-1 w-2/3 rounded-full" style={{ background: c.muted, opacity: 0.6 }} />
           </div>
-          <div className="flex w-4 flex-col justify-end gap-1 pb-0.5">
-            <div className="h-3 w-full" style={{ background: c.flourish ?? c.accent }} />
-            <div className="h-3 w-full" style={{ background: c.accent }} />
+          <div className="flex w-5 flex-col items-center justify-end gap-1">
+            <div className="size-3.5 rounded-full" style={{ background: c.flourish ?? c.accent }} />
+            <div className="size-3.5 rounded-full" style={{ background: c.accent }} />
           </div>
         </div>
-        <div className="flex items-center justify-between border-t border-current/15 px-2.5 py-1.5" style={{ background: c.surface, color: c.ink }}>
-          <span className="truncate font-display text-[0.95rem] font-medium italic">{theme.name}</span>
+        <div className="flex items-center justify-between px-2.5 py-1.5" style={{ background: c.surface, color: c.ink }}>
+          <span className="truncate font-display text-[0.95rem] font-medium">{theme.name}</span>
           {active && <Check className="size-3.5 shrink-0" style={{ color: c.accent }} />}
         </div>
       </button>

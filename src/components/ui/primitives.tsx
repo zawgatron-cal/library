@@ -5,11 +5,11 @@ import { X } from 'lucide-react'
 type ButtonVariant = 'primary' | 'soft' | 'ghost' | 'outline' | 'danger'
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-on-accent hover:bg-accent-strong',
-  soft: 'bg-accent-soft text-accent-strong hover:underline',
-  ghost: 'text-muted hover:text-ink hover:underline',
+  primary: 'bg-accent text-on-accent hover:bg-accent-strong shadow-soft',
+  soft: 'bg-accent-soft text-accent-strong hover:brightness-[0.97]',
+  ghost: 'text-ink hover:bg-hover',
   outline: 'border border-line-strong text-ink hover:bg-hover',
-  danger: 'border border-line-strong text-[color-mix(in_oklab,#8b2e22_85%,var(--ink))] hover:bg-hover',
+  danger: 'bg-[color-mix(in_oklab,#c0503c_14%,var(--surface))] text-[color-mix(in_oklab,#b2412e_80%,var(--ink))] hover:brightness-95',
 }
 
 export function Button({
@@ -82,9 +82,9 @@ export function Dialog({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 animate-fade-in bg-[color-mix(in_oklab,var(--ink)_28%,transparent)] backdrop-blur-[2px]" onClick={onClose} />
-      <div role="dialog" aria-label={title} className={`relative w-full ${width} animate-rise border border-ink bg-surface shadow-[4px_4px_0_color-mix(in_oklab,var(--ink)_40%,transparent)]`}>
-        <div className="flex items-center justify-between border-b border-ink/20 px-6 pt-5 pb-3">
-          <h2 className="font-display text-xl font-medium italic">{title}</h2>
+      <div role="dialog" aria-label={title} className={`relative w-full ${width} animate-rise rounded-xl border border-line bg-surface shadow-lifted`}>
+        <div className="flex items-center justify-between px-6 pt-5 pb-2">
+          <h2 className="font-display text-xl font-medium">{title}</h2>
           <IconButton label="Close" onClick={onClose} className="-mr-2">
             <X />
           </IconButton>
@@ -102,9 +102,9 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 animate-fade-in bg-[color-mix(in_oklab,var(--ink)_18%,transparent)]" onClick={onClose} />
-      <aside role="dialog" aria-label={title} className="relative flex h-full w-full max-w-[26rem] animate-slide-in flex-col border-l-2 border-ink bg-surface">
-        <div className="flex items-center justify-between border-b border-ink/20 px-6 pt-5 pb-3">
-          <h2 className="font-display text-2xl font-medium italic">{title}</h2>
+      <aside role="dialog" aria-label={title} className="relative flex h-full w-full max-w-[26rem] animate-slide-in flex-col border-l border-line bg-surface shadow-lifted">
+        <div className="flex items-center justify-between px-6 pt-5 pb-3">
+          <h2 className="font-display text-2xl font-medium">{title}</h2>
           <IconButton label="Close" onClick={onClose} className="-mr-2">
             <X />
           </IconButton>

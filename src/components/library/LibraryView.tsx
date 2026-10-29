@@ -1,11 +1,11 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-react'
+import { Archive, ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-react'
 import type { Book } from '../../lib/db'
 import { useBooks, useHighlightCounts, useHighlights } from '../../lib/hooks'
 import { bookProgress, displayPage, formatRelative } from '../../lib/format'
 import { importPdf, isPdf, openFailure } from '../../lib/pdf'
 import { Wordmark } from '../ui/Logo'
-import { Button, IconButton } from '../ui/primitives'
+import { Button, IconButton, inputClass } from '../ui/primitives'
 import { useToast } from '../ui/toast'
 import { usePasswordPrompt } from '../ui/usePasswordPrompt'
 import { BookCard } from './BookCard'
@@ -105,29 +105,21 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
 
   return (
     <div className="relative flex h-full animate-fade-in flex-col">
-      <header className="shrink-0 px-6 pt-5 pb-0 sm:px-10">
-        <div className="flex items-end gap-4 pb-4">
-          <Wordmark />
-          <div className="relative mx-auto hidden w-full max-w-sm md:block">
-            <Search className="pointer-events-none absolute top-1/2 left-0 size-4 -translate-y-1/2 text-muted" />
-            <input
-              className="w-full border-0 border-b border-ink/30 bg-transparent py-2 pl-7 text-sm text-ink outline-none placeholder:text-muted/70 focus:border-ink"
-              placeholder="Search your library"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div className="ml-auto flex items-center gap-1 md:ml-0">
-            {importing > 0 && <span className="mr-2 animate-pulse text-xs font-semibold text-muted">Adding {importing}…</span>}
-            <Button variant="ghost" size="sm" onClick={addBooks} className="font-display italic">
-              <Plus className="size-3.5" /> Add
-            </Button>
-            <IconButton label="Appearance & settings" onClick={onOpenSettings}>
-              <Settings2 />
-            </IconButton>
-          </div>
+      <header className="flex shrink-0 items-center gap-4 px-6 py-4 sm:px-10">
+        <Wordmark />
+        <div className="relative mx-auto hidden w-full max-w-sm md:block">
+          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
+          <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
-        <div className="masthead-rule" aria-hidden />
+        <div className="ml-auto flex items-center gap-1.5 md:ml-0">
+          {importing > 0 && <span className="mr-2 animate-pulse text-xs font-semibold text-muted">Adding {importing}…</span>}
+          <Button variant="soft" size="sm" onClick={addBooks}>
+            <Plus className="size-3.5" /> Add
+          </Button>
+          <IconButton label="Appearance & settings" onClick={onOpenSettings}>
+            <Settings2 />
+          </IconButton>
+        </div>
         <input
           ref={fileInput}
           type="file"
@@ -147,15 +139,10 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
             {current && <ContinueCard book={current} />}
 
             {books.length > 0 && (
-              <div className="sticky top-0 z-10 mb-8 flex flex-wrap items-end gap-x-5 gap-y-2 border-b border-ink/20 bg-canvas pt-2 pb-2">
+              <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center gap-2 bg-canvas/85 px-2 py-3 backdrop-blur-md">
                 <div className="relative w-full md:hidden">
-                  <Search className="pointer-events-none absolute top-1/2 left-0 size-4 -translate-y-1/2 text-muted" />
-                  <input
-                    className="w-full border-0 border-b border-ink/30 bg-transparent py-2 pl-7 text-sm outline-none placeholder:text-muted/70 focus:border-ink"
-                    placeholder="Search your library"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                  />
+                  <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
+                  <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
                 {FILTERS.map((f) => (
                   <Chip key={f.value} active={activeFilter === f.value} onClick={() => setFilter(f.value)}>
@@ -164,22 +151,23 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
                 ))}
                 {archivedCount > 0 && (
                   <Chip active={activeFilter === 'archived'} onClick={() => setFilter(activeFilter === 'archived' ? 'all' : 'archived')}>
+                    <Archive className="-mt-px mr-1 inline size-3" />
                     Archived · {archivedCount}
                   </Chip>
                 )}
-                {allTags.length > 0 && <span className="mb-1 text-muted/40" aria-hidden>|</span>}
+                {allTags.length > 0 && <span className="mx-1 h-5 w-px bg-line-strong" />}
                 {allTags.map((t) => (
                   <Chip key={t} active={tag === t} onClick={() => setTag(tag === t ? null : t)}>
-                    {t}
+                    # {t}
                   </Chip>
                 ))}
-                <span className="ml-auto mb-1 font-display text-xs text-muted italic">
+                <span className="ml-auto text-xs text-muted">
                   {visible.length} of {activeFilter === 'archived' ? archivedCount : shelved.length}
                 </span>
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as Sort)}
-                  className="mb-0.5 border-0 border-b border-ink/30 bg-transparent py-1 pr-1 text-xs font-semibold tracking-wide text-ink uppercase outline-none"
+                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none"
                   aria-label="Sort by"
                 >
                   <option value="opened">Recently read</option>
@@ -189,12 +177,6 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
                   <option value="progress">Progress</option>
                 </select>
               </div>
-            )}
-
-            {books.length > 0 && (
-              <p className="ornament-label mb-6">
-                <span>On the shelves</span>
-              </p>
             )}
 
             <Shelves>
@@ -226,8 +208,8 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
       </main>
 
       {dragging && (
-        <div className="pointer-events-none fixed inset-0 z-40 flex animate-fade-in items-center justify-center bg-[color-mix(in_oklab,var(--canvas)_88%,transparent)] p-8">
-          <div className="flex size-full max-w-3xl flex-col items-center justify-center rounded-md border-2 border-dashed border-ink bg-surface text-ink">
+        <div className="pointer-events-none fixed inset-0 z-40 flex animate-fade-in items-center justify-center bg-[color-mix(in_oklab,var(--canvas)_75%,transparent)] p-8 backdrop-blur-sm">
+          <div className="flex size-full max-w-3xl flex-col items-center justify-center rounded-xl border-2 border-dashed border-accent bg-accent-soft/60 text-accent-strong">
             <Upload className="mb-3 size-10" />
             <p className="font-display text-2xl">Drop to add to your library</p>
           </div>
@@ -297,11 +279,13 @@ function AddTile({ onClick, busy }: { onClick: () => void; busy: boolean }) {
       <button
         type="button"
         onClick={onClick}
-        className="folio-empty group/add flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 text-muted transition hover:text-ink"
+        className="group/add flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-sm)+1px)] border-2 border-dashed border-line-strong bg-surface/40 text-muted transition duration-300 ease-out hover:-translate-y-1.5 hover:border-accent hover:bg-accent-soft/50 hover:text-accent-strong"
       >
-        <Plus className={`size-6 ${busy ? 'animate-spin' : ''}`} strokeWidth={1.5} />
-        <span className="font-display text-lg italic">Add books</span>
-        <span className="px-4 text-center text-[0.7rem] leading-snug tracking-wide uppercase">or drop PDFs anywhere</span>
+        <span className="flex size-12 items-center justify-center rounded-full bg-surface shadow-soft transition group-hover/add:scale-105">
+          <Plus className={`size-5 ${busy ? 'animate-spin' : ''}`} />
+        </span>
+        <span className="font-display text-base font-medium">Add books</span>
+        <span className="px-4 text-center text-[0.7rem] leading-snug">or drop PDFs anywhere</span>
       </button>
     </div>
   )
@@ -309,7 +293,11 @@ function AddTile({ onClick, busy }: { onClick: () => void; busy: boolean }) {
 
 function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: ReactNode }) {
   return (
-    <button type="button" onClick={onClick} data-active={active} className="section-chip">
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${active ? 'bg-ink text-canvas' : 'bg-surface text-muted hover:text-ink'}`}
+    >
       {children}
     </button>
   )
@@ -323,45 +311,41 @@ function ContinueCard({ book }: { book: Book }) {
   const open = (el: Element | null) => openBook(book.id, el)
 
   return (
-    <section className="animate-rise mt-6 mb-12">
-      <div className="rule-double" aria-hidden />
-      <div className="flex flex-col gap-6 py-7 sm:flex-row sm:items-stretch sm:gap-9 sm:py-9">
-        <button type="button" className="cover-frame w-28 shrink-0 self-start sm:w-32" onClick={(e) => open(e.currentTarget)} aria-label={`Continue ${book.title}`}>
-          <BookCover book={book} />
+    <section className="animate-rise mt-3 mb-12">
+      <p className="text-xs font-bold tracking-wider text-flourish uppercase">Where you left off</p>
+      <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
+        <button
+          type="button"
+          className="w-24 shrink-0 transition duration-300 ease-out hover:-translate-y-1 sm:w-28"
+          onClick={(e) => open(e.currentTarget)}
+          aria-label={`Continue ${book.title}`}
+        >
+          <BookCover book={book} className="shadow-lifted" />
         </button>
-        <div className="flex min-w-0 flex-1 flex-col justify-center">
-          <p className="ornament-label justify-start">
-            <span>
-              Where you left off · p. {page} of {book.pageCount}
-            </span>
-          </p>
-          <h2 className="mt-3 font-display text-[2rem] leading-[1.05] font-medium tracking-tight text-balance sm:text-[2.55rem]">
-            <button type="button" className="text-left hover:underline decoration-1 underline-offset-4" onClick={(e) => open(e.currentTarget)}>
+        <div className="min-w-0 flex-1 sm:pb-1">
+          <h2 className="font-display text-3xl leading-tight font-medium text-balance sm:text-[2.15rem]">
+            <button type="button" className="text-left transition hover:text-accent-strong" onClick={(e) => open(e.currentTarget)}>
               {book.title}
             </button>
           </h2>
-          <p className="byline mt-2 font-display text-base text-muted italic">
-            {book.author || 'Unknown author'}
-            <span className="mx-2 text-ink/25" aria-hidden>
-              ◆
-            </span>
-            {formatRelative(book.openedAt!)}
-            {progress > 0 && progress < 1 && (
-              <>
-                <span className="mx-2 text-ink/25" aria-hidden>
-                  ◆
-                </span>
-                {Math.round(progress * 100)}% read
-              </>
-            )}
+          <p className="mt-1.5 text-sm text-muted">
+            {book.author || 'Unknown author'} · {formatRelative(book.openedAt!)} · p. {page} of {book.pageCount}
           </p>
-          {latest && <blockquote className="pull-quote line-clamp-3 max-w-2xl">{latest.note || `“${latest.text}”`}</blockquote>}
-          <button type="button" className="continue-link self-start" onClick={(e) => open(e.currentTarget.closest('section'))}>
-            Continue reading <ArrowRight className="size-4" aria-hidden />
-          </button>
+          {latest && (
+            <p className="mt-4 line-clamp-2 max-w-2xl font-display text-[0.95rem] leading-relaxed text-ink/75 italic">
+              {latest.note || `“${latest.text}”`}
+            </p>
+          )}
+          <div className="mt-5 flex flex-wrap items-center gap-4">
+            <div className="h-1.5 min-w-[8rem] flex-1 overflow-hidden rounded-full bg-line sm:max-w-xs">
+              <div className="h-full rounded-full bg-flourish" style={{ width: `${Math.max(progress * 100, 2)}%` }} />
+            </div>
+            <Button variant="primary" onClick={(e) => open(e.currentTarget.closest('section'))}>
+              Continue <ArrowRight className="size-4" />
+            </Button>
+          </div>
         </div>
       </div>
-      <div className="rule-double" aria-hidden />
     </section>
   )
 }

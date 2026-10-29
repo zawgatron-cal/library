@@ -15,25 +15,23 @@
   --color-flourish: var(--flourish);
   --color-on-accent: var(--on-accent);
   --color-paper: var(--paper);
-  --color-line: color-mix(in oklab, var(--ink) 18%, var(--surface));
-  --color-line-strong: color-mix(in oklab, var(--ink) 32%, var(--surface));
-  --color-sunken: color-mix(in oklab, var(--ink) 6%, var(--canvas));
-  --color-hover: color-mix(in oklab, var(--ink) 7%, transparent);
-  --color-accent-soft: color-mix(in oklab, var(--accent) 10%, var(--surface));
-  --color-accent-strong: color-mix(in oklab, var(--accent) 88%, var(--ink));
-  --color-highlight: var(--highlight);
+  --color-line: color-mix(in oklab, var(--ink) 11%, var(--surface));
+  --color-line-strong: color-mix(in oklab, var(--ink) 22%, var(--surface));
+  --color-sunken: color-mix(in oklab, var(--ink) 5%, var(--canvas));
+  --color-hover: color-mix(in oklab, var(--ink) 6%, transparent);
+  --color-accent-soft: color-mix(in oklab, var(--accent) 16%, var(--surface));
+  --color-accent-strong: color-mix(in oklab, var(--accent) 82%, var(--ink));
 
   --font-sans: var(--ui-font);
-  --font-display: 'EB Garamond Variable', Garamond, 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-display: 'EB Garamond Variable', Garamond, 'Iowan Old Style', Georgia, serif;
 
   --radius-sm: calc(var(--radius-unit) * 0.5);
   --radius-md: var(--radius-unit);
   --radius-lg: calc(var(--radius-unit) * 1.4);
   --radius-xl: calc(var(--radius-unit) * 1.9);
 
-  /* Matte e-ink: hairline borders stand in for soft shadows. */
-  --shadow-soft: 0 0 0 1px color-mix(in oklab, var(--ink) 16%, transparent);
-  --shadow-lifted: 0 0 0 1.5px color-mix(in oklab, var(--ink) 24%, transparent);
+  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--ink) 8%, transparent), 0 8px 24px -12px color-mix(in oklab, var(--ink) 22%, transparent);
+  --shadow-lifted: 0 2px 4px color-mix(in oklab, var(--ink) 8%, transparent), 0 24px 48px -20px color-mix(in oklab, var(--ink) 35%, transparent);
 
   --animate-fade-in: fade-in 220ms ease-out both;
   --animate-rise: rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -61,36 +59,34 @@
 }
 
 :root {
-  --canvas: #efebe3;
-  --surface: #fbf8f1;
-  --ink: #1a1a1a;
-  --muted: #4a4a4a;
-  --accent: #1a1a1a;
-  --flourish: #5c5346;
-  --paper: #fdfbf7;
-  --on-accent: #fbf8f1;
-  --highlight: #ffff00;
-  --ui-font: 'EB Garamond Variable', Garamond, 'Iowan Old Style', Georgia, 'Times New Roman', serif;
-  --radius-unit: 0.2rem;
+  --canvas: #ebe4d6;
+  --surface: #f6f2ea;
+  --ink: #2e2924;
+  --muted: #6f665c;
+  --accent: #7a5a43;
+  --flourish: #9a8870;
+  --paper: #f3ede2;
+  --on-accent: #f6f2ea;
+  --ui-font: 'Nunito Variable', system-ui, sans-serif;
+  --radius-unit: 0.75rem;
   --tint-strength: 0.7;
 
-  /* Annotation colours stay readable on paper; sun is the e-ink yellow mark. */
-  --hl-sun: #ffff00;
-  --hl-leaf: #c8c8c8;
-  --hl-sky: #b0b0b0;
-  --hl-rose: #d4d4d4;
-  --hl-lilac: #a8a8a8;
-  --hl-opacity: 0.72;
+  --hl-sun: #f6d365;
+  --hl-leaf: #b5d99c;
+  --hl-sky: #a7cbef;
+  --hl-rose: #f2afbd;
+  --hl-lilac: #cfb8ef;
+  --hl-opacity: 0.55;
   --hl-blend: multiply;
 }
 
 :root[data-dark='true'] {
-  --hl-sun: #ffff00;
-  --hl-leaf: #6a6a6a;
-  --hl-sky: #5a5a5a;
-  --hl-rose: #7a7a7a;
-  --hl-lilac: #4a4a4a;
-  --hl-opacity: 0.55;
+  --hl-sun: #d9b54a;
+  --hl-leaf: #84b46a;
+  --hl-sky: #6f9fd6;
+  --hl-rose: #d27d90;
+  --hl-lilac: #a487d6;
+  --hl-opacity: 0.38;
   --hl-blend: normal;
 }
 
@@ -108,11 +104,11 @@ html {
 body {
   margin: 0;
   font-family: var(--ui-font);
-  font-size: 1.125rem;
-  line-height: 1.65;
-  /* Matte ink: avoid soft greyscale antialiasing that looks glow-y on paper themes. */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition:
+    background-color 300ms ease,
+    color 300ms ease;
 }
 
 #root {
@@ -123,58 +119,47 @@ body {
 }
 
 ::selection {
-  background: var(--highlight);
-  color: #1a1a1a;
+  background: color-mix(in oklab, var(--accent) 30%, transparent);
 }
 
 :where(button, a, [role='switch']):focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
+  outline: 2px solid color-mix(in oklab, var(--accent) 70%, transparent);
+  outline-offset: 2px;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in oklab, var(--ink) 28%, transparent) transparent;
+  scrollbar-color: color-mix(in oklab, var(--ink) 20%, transparent) transparent;
 }
 
 input[type='range'] {
   accent-color: var(--accent);
 }
 
-/* Optional paper grain: fine monochrome noise kept under 3% opacity. */
+/* A whisper of paper grain over the whole app. */
 :root[data-grain='true'] body::after {
   content: '';
   position: fixed;
   inset: 0;
   pointer-events: none;
   z-index: 100;
-  opacity: 1;
+  opacity: 0.06;
   mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.4' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.9 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
 }
 
 :root[data-grain='true'][data-dark='true'] body::after {
   mix-blend-mode: screen;
+  opacity: 0.035;
   filter: invert(1);
 }
 
-/* E-ink screens can't animate: pagination and state changes swap instantly. */
 :root[data-reduce-motion='true'] *,
 :root[data-reduce-motion='true'] *::before,
 :root[data-reduce-motion='true'] *::after {
   animation: none !important;
   transition: none !important;
   scroll-behavior: auto !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-    scroll-behavior: auto !important;
-  }
 }
 
 /* ---------- PDF pages ---------- */
@@ -212,21 +197,18 @@ input[type='range'] {
   transform-origin: 0 0;
 }
 
-/* Blank paper over a page until its first render. Instant by default (e-ink); fades only if motion is on. */
+/* Blank paper over a page until its first render, which then fades in instead of popping. */
 .page-veil {
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: var(--paper);
+  background: white;
   pointer-events: none;
+  transition: opacity 280ms ease-out;
 }
 
 .page-veil[data-painted='true'] {
   opacity: 0;
-}
-
-:root:not([data-reduce-motion='true']) .page-veil {
-  transition: opacity 280ms ease-out;
 }
 
 .pdf-page .react-pdf__Page__canvas {
@@ -274,7 +256,7 @@ input[type='range'] {
 
 .highlight-rect {
   position: absolute;
-  border-radius: 0;
+  border-radius: 2px;
   opacity: var(--hl-opacity);
 }
 
@@ -299,8 +281,7 @@ input[type='range'] {
 }
 
 .pdf-page .textLayer ::selection {
-  background: var(--highlight);
-  color: #1a1a1a;
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
 /* Keep pdf.js's Chrome workaround: <br> selection boxes sit in the left margin and look like side
@@ -312,9 +293,9 @@ input[type='range'] {
 
 .pdf-page .textLayer mark {
   color: transparent;
-  background: var(--highlight);
-  border-radius: 0;
-  box-shadow: none;
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent);
 }
 
 .pdf-page .annotationLayer .linkAnnotation:hover,
@@ -382,15 +363,14 @@ input[type='range'] {
 }
 
 .ocr-layer ::selection {
-  background: var(--highlight);
-  color: #1a1a1a;
+  background: color-mix(in oklab, var(--accent) 35%, transparent);
 }
 
 .ocr-layer mark {
   color: transparent;
-  background: var(--highlight);
-  border-radius: 0;
-  box-shadow: none;
+  background: color-mix(in oklab, var(--accent) 38%, transparent);
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--accent) 60%, transparent);
 }
 
 /* Turn a single page, from a button that appears in a thumbnail's top-left corner on hover. */
@@ -463,29 +443,6 @@ input[type='range'] {
   animation-timing-function: cubic-bezier(0.25, 0.9, 0.3, 1);
 }
 
-/* Instant swaps when e-ink / reduced-motion is on. */
-:root[data-reduce-motion='true']::view-transition-group(*),
-:root[data-reduce-motion='true']::view-transition-old(*),
-:root[data-reduce-motion='true']::view-transition-new(*),
-:root[data-reduce-motion='true']::view-transition-group(*.book),
-:root[data-reduce-motion='true']::view-transition-old(*.book),
-:root[data-reduce-motion='true']::view-transition-new(*.book) {
-  animation: none !important;
-  animation-duration: 0s !important;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  ::view-transition-group(*),
-  ::view-transition-old(*),
-  ::view-transition-new(*),
-  ::view-transition-group(*.book),
-  ::view-transition-old(*.book),
-  ::view-transition-new(*.book) {
-    animation: none !important;
-    animation-duration: 0s !important;
-  }
-}
-
 /* Opening: the shelves step back and dim while the book comes forward. */
 ::view-transition-old(root) {
   animation: 300ms cubic-bezier(0.4, 0, 1, 1) both vt-recede;
@@ -508,9 +465,9 @@ input[type='range'] {
 ::view-transition-group(*.book) {
   animation-duration: 680ms;
   animation-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
-  border-radius: 0;
+  border-radius: 4px;
   overflow: clip;
-  box-shadow: 0 0 0 1px color-mix(in oklab, var(--ink) 20%, transparent);
+  box-shadow: 0 28px 60px -24px rgb(0 0 0 / 0.45);
 }
 
 ::view-transition-old(*.book),
@@ -584,133 +541,26 @@ input[type='range'] {
   animation: none;
 }
 
-/* ---------- Newspaper / literary ornaments ---------- */
-
-.masthead-rule {
-  height: 0;
-  border-top: 3px double var(--ink);
-}
-
-.rule-double {
-  height: 5px;
-  border-top: 1.5px solid var(--ink);
-  border-bottom: 1.5px solid var(--ink);
-}
-
-.ornament-label {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.7rem;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.ornament-label::before,
-.ornament-label::after {
-  content: '❧';
-  font-size: 0.85rem;
-  letter-spacing: 0;
-  color: color-mix(in oklab, var(--ink) 45%, transparent);
-  font-weight: 400;
-}
-
-.section-chip {
-  padding: 0.2rem 0.15rem 0.35rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  border-bottom: 2px solid transparent;
-}
-
-.section-chip[data-active='true'] {
-  color: var(--ink);
-  border-bottom-color: var(--ink);
-}
-
-.section-chip:hover {
-  color: var(--ink);
-}
-
-.cover-frame {
-  padding: 5px;
-  background: var(--surface);
-  border: 1px solid var(--ink);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in oklab, var(--ink) 18%, transparent),
-    0 0 0 3px var(--canvas),
-    0 0 0 4px color-mix(in oklab, var(--ink) 35%, transparent);
-}
-
-.pull-quote {
-  margin: 1rem 0 0;
-  padding: 0.15rem 0 0.15rem 1rem;
-  border-left: 3px solid var(--ink);
-  font-family: var(--font-display);
-  font-style: italic;
-  font-size: 1.05rem;
-  line-height: 1.45;
-  color: var(--ink);
-}
-
-.continue-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  margin-top: 1.35rem;
-  padding-bottom: 0.15rem;
-  border-bottom: 1px solid var(--ink);
-  font-family: var(--font-display);
-  font-size: 1.15rem;
-  font-style: italic;
-  font-weight: 500;
-  color: var(--ink);
-  background: none;
-}
-
-.continue-link:hover {
-  border-bottom-width: 2px;
-}
-
-.continue-link:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 3px;
-}
-
-.folio-empty {
-  border: 1.5px dashed color-mix(in oklab, var(--ink) 35%, transparent);
-  background:
-    linear-gradient(to right, color-mix(in oklab, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 1.1rem 100%,
-    linear-gradient(to bottom, color-mix(in oklab, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 100% 1.1rem,
-    var(--surface);
-}
-
-/* The shelf each row of books rests on — a ruled newspaper ledge. */
+/* The shelf each row of books rests on. */
 .shelf-plank {
   position: absolute;
-  left: -12px;
-  right: -12px;
-  height: 0;
-  border-top: 2px solid color-mix(in oklab, var(--ink) 28%, transparent);
-  border-bottom: 1px solid color-mix(in oklab, var(--ink) 55%, transparent);
-  background: none;
-  box-shadow: none;
-  transform: translateY(6px);
-}
-
-/* Book covers: flat print, no glass card. */
-.book-cover {
-  border-radius: 0 !important;
+  left: -18px;
+  right: -18px;
+  height: 11px;
+  border-radius: 3px 3px 5px 5px;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in oklab, var(--ink) 7%, var(--surface)),
+    color-mix(in oklab, var(--ink) 14%, var(--canvas))
+  );
+  /* A thin gilt edge along the front of the shelf. */
   box-shadow:
-    1px 1px 0 color-mix(in oklab, var(--ink) 18%, transparent),
-    2px 2px 0 color-mix(in oklab, var(--ink) 10%, transparent) !important;
+    inset 0 1px 0 color-mix(in oklab, var(--flourish) 55%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--ink) 10%, transparent),
+    0 12px 20px -12px color-mix(in oklab, var(--ink) 45%, transparent);
 }
 
+/* Book covers get a little spine shading. */
 .book-cover::after {
   content: '';
   position: absolute;
@@ -719,10 +569,11 @@ input[type='range'] {
   border-radius: inherit;
   background: linear-gradient(
     90deg,
-    rgb(0 0 0 / 0.12) 0%,
-    rgb(0 0 0 / 0.03) 3%,
-    transparent 7%,
-    transparent 97%,
-    rgb(0 0 0 / 0.04) 100%
+    rgb(0 0 0 / 0.16) 0%,
+    rgb(255 255 255 / 0.12) 2.5%,
+    rgb(0 0 0 / 0.05) 5%,
+    transparent 9%,
+    transparent 94%,
+    rgb(0 0 0 / 0.06) 100%
   );
 }

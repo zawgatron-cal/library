@@ -44,38 +44,38 @@ export function BookCard({
         <button
           type="button"
           onClick={(e) => openBook(book.id, e.currentTarget)}
-          className="block w-full"
+          className="block w-full transition duration-300 ease-out group-hover:-translate-y-1.5"
           aria-label={`Open ${book.title}`}
         >
-          <BookCover book={book} morph />
+          <BookCover book={book} morph className="group-hover:shadow-lifted" />
         </button>
 
         {progress > 0 && progress < 1 && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-ink/10">
-            <div className="h-full bg-ink" style={{ width: `${Math.max(progress * 100, 3)}%` }} />
+          <div className="pointer-events-none absolute inset-x-2 bottom-2 h-1 overflow-hidden rounded-full bg-[color-mix(in_oklab,var(--surface)_70%,transparent)] backdrop-blur-sm transition duration-300 ease-out group-hover:-translate-y-1.5">
+            <div className="h-full rounded-full bg-flourish" style={{ width: `${Math.max(progress * 100, 3)}%` }} />
           </div>
         )}
         {book.finishedAt && (
-          <span className="pointer-events-none absolute bottom-2 left-2 inline-flex items-center gap-1 border border-ink bg-surface px-1.5 py-0.5 text-[0.62rem] font-bold tracking-wide text-ink uppercase">
+          <span className="pointer-events-none absolute bottom-2 left-2 inline-flex items-center gap-1 rounded-full bg-surface/90 px-2 py-0.5 text-[0.65rem] font-bold text-accent-strong shadow-soft backdrop-blur transition duration-300 ease-out group-hover:-translate-y-1.5">
             <BookCheck className="size-3" /> Finished
           </span>
         )}
 
-        <div className="absolute top-1.5 right-1.5 flex gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 transition duration-300 ease-out group-focus-within:opacity-100 group-hover:-translate-y-1.5 group-hover:opacity-100">
           <button
             type="button"
             aria-label={book.favorite ? 'Remove from favourites' : 'Add to favourites'}
             onClick={() => updateBook(book.id, { favorite: !book.favorite })}
-            className="flex size-7 items-center justify-center border border-ink bg-surface text-ink hover:bg-ink hover:text-canvas"
+            className="flex size-7.5 items-center justify-center rounded-full bg-surface/90 text-ink shadow-soft backdrop-blur hover:text-accent"
           >
-            <Heart className={`size-3.5 ${book.favorite ? 'fill-current' : ''}`} />
+            <Heart className={`size-3.5 ${book.favorite ? 'fill-accent text-accent' : ''}`} />
           </button>
           <button
             type="button"
             aria-label={archived ? 'Unarchive' : 'Archive'}
             title={archived ? 'Unarchive' : 'Archive'}
             onClick={toggleArchived}
-            className="flex size-7 items-center justify-center border border-ink bg-surface text-ink hover:bg-ink hover:text-canvas"
+            className="flex size-7.5 items-center justify-center rounded-full bg-surface/90 text-ink shadow-soft backdrop-blur hover:text-accent"
           >
             {archived ? <ArchiveRestore className="size-3.5" /> : <Archive className="size-3.5" />}
           </button>
@@ -91,26 +91,28 @@ export function BookCard({
                 type="button"
                 aria-label="More"
                 onClick={onClick}
-                className="flex size-7 items-center justify-center border border-ink bg-surface text-ink hover:bg-ink hover:text-canvas"
+                className="flex size-7.5 items-center justify-center rounded-full bg-surface/90 text-ink shadow-soft backdrop-blur hover:text-accent"
               >
                 <MoreHorizontal className="size-4" />
               </button>
             )}
           />
         </div>
-        {book.favorite && <Heart className="pointer-events-none absolute top-2.5 left-2.5 size-3.5 fill-ink text-ink" />}
+        {book.favorite && (
+          <Heart className="pointer-events-none absolute top-3 left-3 size-3.5 fill-accent text-accent drop-shadow transition duration-300 ease-out group-hover:-translate-y-1.5" />
+        )}
       </div>
 
-      <div className="mt-3 border-t border-ink/15 pt-2.5">
+      <div className="mt-[1.4rem] px-0.5">
         <button
           type="button"
           onClick={(e) => openBook(book.id, e.currentTarget.closest('article'))}
-          className="line-clamp-2 text-left font-display text-[1.02rem] leading-snug font-medium hover:underline decoration-1 underline-offset-2"
+          className="line-clamp-2 text-left font-display text-[0.95rem] leading-snug font-medium hover:text-accent-strong"
         >
           {book.title}
         </button>
-        <p className="mt-0.5 truncate font-display text-xs text-muted italic">{book.author || 'Unknown author'}</p>
-        <p className="mt-1 text-[0.68rem] font-semibold tracking-wide text-muted/80 uppercase">
+        <p className="mt-0.5 truncate text-xs text-muted">{book.author || 'Unknown author'}</p>
+        <p className="mt-1 text-[0.7rem] font-semibold text-muted/80">
           {reading ? (
             <span className="text-accent-strong">Reading text… {Math.round((ocr.done / ocr.total) * 100)}%</span>
           ) : progress >= 1 ? (
