@@ -105,11 +105,11 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
 
   return (
     <div className="relative flex h-full animate-fade-in flex-col">
-      <header className="flex shrink-0 items-center gap-4 px-6 py-4 sm:px-10">
+      <header className="flex shrink-0 items-center gap-4 border-b-2 border-ink px-6 py-4 sm:px-10">
         <Wordmark />
         <div className="relative mx-auto hidden w-full max-w-sm md:block">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-          <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <input className={`${inputClass} rounded-md bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
           {importing > 0 && <span className="mr-2 animate-pulse text-xs font-semibold text-muted">Adding {importing}…</span>}
@@ -139,10 +139,10 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
             {current && <ContinueCard book={current} />}
 
             {books.length > 0 && (
-              <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center gap-2 bg-canvas/85 px-2 py-3 backdrop-blur-md">
+              <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center gap-2 border-b border-line bg-canvas px-2 py-3">
                 <div className="relative w-full md:hidden">
                   <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-                  <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
+                  <input className={`${inputClass} rounded-md bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
                 </div>
                 {FILTERS.map((f) => (
                   <Chip key={f.value} active={activeFilter === f.value} onClick={() => setFilter(f.value)}>
@@ -167,7 +167,7 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as Sort)}
-                  className="rounded-full border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none"
+                  className="rounded-md border border-line bg-surface px-3 py-1.5 text-xs font-semibold text-ink outline-none"
                   aria-label="Sort by"
                 >
                   <option value="opened">Recently read</option>
@@ -208,8 +208,8 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
       </main>
 
       {dragging && (
-        <div className="pointer-events-none fixed inset-0 z-40 flex animate-fade-in items-center justify-center bg-[color-mix(in_oklab,var(--canvas)_75%,transparent)] p-8 backdrop-blur-sm">
-          <div className="flex size-full max-w-3xl flex-col items-center justify-center rounded-xl border-2 border-dashed border-accent bg-accent-soft/60 text-accent-strong">
+        <div className="pointer-events-none fixed inset-0 z-40 flex animate-fade-in items-center justify-center bg-[color-mix(in_oklab,var(--canvas)_88%,transparent)] p-8">
+          <div className="flex size-full max-w-3xl flex-col items-center justify-center rounded-md border-2 border-dashed border-ink bg-surface text-ink">
             <Upload className="mb-3 size-10" />
             <p className="font-display text-2xl">Drop to add to your library</p>
           </div>
@@ -279,9 +279,9 @@ function AddTile({ onClick, busy }: { onClick: () => void; busy: boolean }) {
       <button
         type="button"
         onClick={onClick}
-        className="group/add flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-sm)+1px)] border-2 border-dashed border-line-strong bg-surface/40 text-muted transition duration-300 ease-out hover:-translate-y-1.5 hover:border-accent hover:bg-accent-soft/50 hover:text-accent-strong"
+        className="group/add flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-sm)+1px)] border-2 border-dashed border-line-strong bg-surface/40 text-muted transition hover:border-ink hover:bg-surface hover:text-ink"
       >
-        <span className="flex size-12 items-center justify-center rounded-full bg-surface shadow-soft transition group-hover/add:scale-105">
+        <span className="flex size-12 items-center justify-center rounded-md border border-line bg-surface">
           <Plus className={`size-5 ${busy ? 'animate-spin' : ''}`} />
         </span>
         <span className="font-display text-base font-medium">Add books</span>
@@ -296,7 +296,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${active ? 'bg-ink text-canvas' : 'bg-surface text-muted hover:text-ink'}`}
+      className={`rounded-md px-3.5 py-1.5 text-xs font-bold transition ${active ? 'bg-ink text-canvas' : 'border border-line bg-surface text-muted hover:text-ink'}`}
     >
       {children}
     </button>
@@ -310,24 +310,24 @@ function ContinueCard({ book }: { book: Book }) {
   const latest = useMemo(() => [...highlights].sort((a, b) => b.createdAt - a.createdAt)[0], [highlights])
 
   return (
-    <section className="mt-2 mb-10 flex animate-rise items-center gap-6 rounded-xl border border-line bg-surface p-5 shadow-soft sm:gap-8 sm:p-7">
-      <button type="button" className="w-20 shrink-0 transition duration-300 ease-out hover:-translate-y-1 sm:w-24" onClick={(e) => openBook(book.id, e.currentTarget)} aria-label={`Continue ${book.title}`}>
+    <section className="mt-2 mb-10 flex animate-rise items-center gap-6 rounded-md border border-line-strong bg-surface p-5 sm:gap-8 sm:p-7">
+      <button type="button" className="w-20 shrink-0 sm:w-24" onClick={(e) => openBook(book.id, e.currentTarget)} aria-label={`Continue ${book.title}`}>
         <BookCover book={book} />
       </button>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold tracking-wider text-flourish uppercase">Where you left off</p>
+        <p className="meta text-xs font-bold tracking-wider text-muted uppercase">Where you left off</p>
         <h2 className="mt-1 truncate font-display text-2xl font-medium">{book.title}</h2>
-        <p className="truncate text-sm text-muted">
+        <p className="byline truncate text-sm text-muted">
           {book.author || 'Unknown author'} · {formatRelative(book.openedAt!)}
         </p>
         {latest && (
-          <p className="mt-3 line-clamp-2 max-w-2xl border-l-2 border-accent/40 pl-3 font-display text-sm leading-relaxed text-ink/80 italic">
+          <p className="mt-3 line-clamp-2 max-w-2xl border-l-4 border-ink pl-3 font-display text-sm leading-relaxed text-ink italic">
             {latest.note || `“${latest.text}”`}
           </p>
         )}
         <div className="mt-4 flex items-center gap-3">
-          <div className="h-1.5 max-w-xs flex-1 overflow-hidden rounded-full bg-line">
-            <div className="h-full rounded-full bg-flourish" style={{ width: `${Math.max(progress * 100, 2)}%` }} />
+          <div className="h-1 max-w-xs flex-1 overflow-hidden bg-line">
+            <div className="h-full bg-ink" style={{ width: `${Math.max(progress * 100, 2)}%` }} />
           </div>
           <span className="text-xs font-semibold text-muted tabular-nums">
             p. {page} of {book.pageCount}

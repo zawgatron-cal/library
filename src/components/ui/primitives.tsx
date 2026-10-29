@@ -5,11 +5,11 @@ import { X } from 'lucide-react'
 type ButtonVariant = 'primary' | 'soft' | 'ghost' | 'outline' | 'danger'
 
 const VARIANTS: Record<ButtonVariant, string> = {
-  primary: 'bg-accent text-on-accent hover:bg-accent-strong shadow-soft',
-  soft: 'bg-accent-soft text-accent-strong hover:brightness-[0.97]',
-  ghost: 'text-ink hover:bg-hover',
+  primary: 'bg-accent text-on-accent hover:bg-accent-strong',
+  soft: 'bg-accent-soft text-accent-strong hover:underline',
+  ghost: 'text-muted hover:text-ink hover:underline',
   outline: 'border border-line-strong text-ink hover:bg-hover',
-  danger: 'bg-[color-mix(in_oklab,#c0503c_14%,var(--surface))] text-[color-mix(in_oklab,#b2412e_80%,var(--ink))] hover:brightness-95',
+  danger: 'border border-line-strong text-[color-mix(in_oklab,#8b2e22_85%,var(--ink))] hover:bg-hover',
 }
 
 export function Button({

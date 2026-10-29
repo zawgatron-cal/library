@@ -26,24 +26,31 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const root = document.documentElement
-    const { colors } = theme
-    root.style.setProperty('--canvas', colors.canvas)
-    root.style.setProperty('--surface', colors.surface)
-    root.style.setProperty('--ink', colors.ink)
-    root.style.setProperty('--muted', colors.muted)
-    root.style.setProperty('--accent', colors.accent)
-    root.style.setProperty('--flourish', flourishOf(colors))
-    root.style.setProperty('--paper', colors.paper)
-    root.style.setProperty('--on-accent', onAccent(colors))
-    root.style.setProperty('--ui-font', uiFont.family)
-    root.style.setProperty('--radius-unit', `${ROUNDNESS[settings.roundness]}rem`)
-    root.style.setProperty('--tint-strength', `${settings.tintStrength / 100}`)
-    root.style.fontSize = `${settings.uiScale * 16}px`
-    root.dataset.dark = String(dark)
-    root.dataset.grain = String(settings.grain)
-    root.dataset.reduceMotion = String(settings.reduceMotion)
-    root.style.colorScheme = dark ? 'dark' : 'light'
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.canvas)
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const apply = () => {
+      const { colors } = theme
+      root.style.setProperty('--canvas', colors.canvas)
+      root.style.setProperty('--surface', colors.surface)
+      root.style.setProperty('--ink', colors.ink)
+      root.style.setProperty('--muted', colors.muted)
+      root.style.setProperty('--accent', colors.accent)
+      root.style.setProperty('--flourish', flourishOf(colors))
+      root.style.setProperty('--paper', colors.paper)
+      root.style.setProperty('--on-accent', onAccent(colors))
+      root.style.setProperty('--highlight', '#FFFF00')
+      root.style.setProperty('--ui-font', uiFont.family)
+      root.style.setProperty('--radius-unit', `${ROUNDNESS[settings.roundness]}rem`)
+      root.style.setProperty('--tint-strength', `${settings.tintStrength / 100}`)
+      root.style.fontSize = `${settings.uiScale * 16}px`
+      root.dataset.dark = String(dark)
+      root.dataset.grain = String(settings.grain)
+      root.dataset.reduceMotion = String(settings.reduceMotion || mq.matches)
+      root.style.colorScheme = dark ? 'dark' : 'light'
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', colors.canvas)
+    }
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
   }, [theme, dark, uiFont, settings.roundness, settings.tintStrength, settings.uiScale, settings.grain, settings.reduceMotion])
 
   const value = useMemo<SettingsContextValue>(

@@ -94,8 +94,8 @@ export function SettingsSheet({ onClose }: { onClose: () => void }) {
               ]}
             />
           </Field>
-          <Toggle label="Paper grain" hint="A faint texture, like real paper." checked={settings.grain} onChange={(grain) => update({ grain })} />
-          <Toggle label="Reduce motion" hint="Turn off animations and smooth scrolling." checked={settings.reduceMotion} onChange={(reduceMotion) => update({ reduceMotion })} />
+          <Toggle label="Paper grain" hint="A faint matte texture, under 3% opacity." checked={settings.grain} onChange={(grain) => update({ grain })} />
+          <Toggle label="Reduce motion" hint="E-ink style: swap pages and panels instantly, no animation." checked={settings.reduceMotion} onChange={(reduceMotion) => update({ reduceMotion })} />
         </div>
       </Section>
 
