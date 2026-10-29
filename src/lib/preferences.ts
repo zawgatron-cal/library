@@ -41,7 +41,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tintStrength: 70,
   uiFont: 'nunito',
   uiScale: 1,
-  roundness: 'soft',
+  roundness: 'round',
   grain: true,
   reduceMotion: false,
   pageGap: 20,

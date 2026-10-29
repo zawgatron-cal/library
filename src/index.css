@@ -15,23 +15,23 @@
   --color-flourish: var(--flourish);
   --color-on-accent: var(--on-accent);
   --color-paper: var(--paper);
-  --color-line: color-mix(in oklab, var(--ink) 11%, var(--surface));
-  --color-line-strong: color-mix(in oklab, var(--ink) 22%, var(--surface));
-  --color-sunken: color-mix(in oklab, var(--ink) 5%, var(--canvas));
-  --color-hover: color-mix(in oklab, var(--ink) 6%, transparent);
-  --color-accent-soft: color-mix(in oklab, var(--accent) 16%, var(--surface));
-  --color-accent-strong: color-mix(in oklab, var(--accent) 82%, var(--ink));
+  --color-line: color-mix(in oklab, var(--ink) 9%, var(--surface));
+  --color-line-strong: color-mix(in oklab, var(--ink) 18%, var(--surface));
+  --color-sunken: color-mix(in oklab, var(--ink) 4%, var(--canvas));
+  --color-hover: color-mix(in oklab, var(--ink) 5%, transparent);
+  --color-accent-soft: color-mix(in oklab, var(--accent) 14%, var(--surface));
+  --color-accent-strong: color-mix(in oklab, var(--accent) 78%, var(--ink));
 
   --font-sans: var(--ui-font);
   --font-display: 'EB Garamond Variable', Garamond, 'Iowan Old Style', Georgia, serif;
 
-  --radius-sm: calc(var(--radius-unit) * 0.5);
+  --radius-sm: calc(var(--radius-unit) * 0.55);
   --radius-md: var(--radius-unit);
-  --radius-lg: calc(var(--radius-unit) * 1.4);
-  --radius-xl: calc(var(--radius-unit) * 1.9);
+  --radius-lg: calc(var(--radius-unit) * 1.5);
+  --radius-xl: calc(var(--radius-unit) * 2.1);
 
-  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--ink) 8%, transparent), 0 8px 24px -12px color-mix(in oklab, var(--ink) 22%, transparent);
-  --shadow-lifted: 0 2px 4px color-mix(in oklab, var(--ink) 8%, transparent), 0 24px 48px -20px color-mix(in oklab, var(--ink) 35%, transparent);
+  --shadow-soft: 0 1px 2px color-mix(in oklab, var(--ink) 5%, transparent), 0 10px 28px -14px color-mix(in oklab, var(--ink) 18%, transparent);
+  --shadow-lifted: 0 4px 10px color-mix(in oklab, var(--ink) 6%, transparent), 0 28px 56px -24px color-mix(in oklab, var(--ink) 28%, transparent);
 
   --animate-fade-in: fade-in 220ms ease-out both;
   --animate-rise: rise 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
@@ -68,7 +68,7 @@
   --paper: #f3ede2;
   --on-accent: #f6f2ea;
   --ui-font: 'Nunito Variable', system-ui, sans-serif;
-  --radius-unit: 0.75rem;
+  --radius-unit: 0.9rem;
   --tint-strength: 0.7;
 
   --hl-sun: #f6d365;
@@ -116,6 +116,37 @@ body {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+/* Soft lamp-lit wash behind the reading room. */
+.ambient-wash {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% -10%, color-mix(in oklab, var(--flourish) 22%, transparent), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 100% 80%, color-mix(in oklab, var(--accent) 10%, transparent), transparent 65%),
+    radial-gradient(ellipse 45% 35% at 0% 70%, color-mix(in oklab, var(--flourish) 12%, transparent), transparent 60%);
+  opacity: 0.85;
+}
+
+:root[data-dark='true'] .ambient-wash {
+  opacity: 0.55;
+}
+
+.continue-glow {
+  position: relative;
+}
+
+.continue-glow::before {
+  content: '';
+  position: absolute;
+  inset: -1.5rem -2rem -2rem;
+  z-index: -1;
+  border-radius: 2.5rem;
+  background: radial-gradient(ellipse at 30% 40%, color-mix(in oklab, var(--flourish) 16%, transparent), transparent 65%);
+  opacity: 0.9;
 }
 
 ::selection {
@@ -546,18 +577,18 @@ input[type='range'] {
   position: absolute;
   left: -18px;
   right: -18px;
-  height: 11px;
-  border-radius: 3px 3px 5px 5px;
+  height: 12px;
+  border-radius: 4px 4px 8px 8px;
   background: linear-gradient(
     to bottom,
-    color-mix(in oklab, var(--ink) 7%, var(--surface)),
-    color-mix(in oklab, var(--ink) 14%, var(--canvas))
+    color-mix(in oklab, var(--flourish) 18%, var(--surface)),
+    color-mix(in oklab, var(--ink) 12%, var(--canvas))
   );
-  /* A thin gilt edge along the front of the shelf. */
+  /* A soft gilt edge along the front of the shelf. */
   box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--flourish) 55%, transparent),
-    inset 0 -1px 0 color-mix(in oklab, var(--ink) 10%, transparent),
-    0 12px 20px -12px color-mix(in oklab, var(--ink) 45%, transparent);
+    inset 0 1px 0 color-mix(in oklab, var(--flourish) 45%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, var(--ink) 8%, transparent),
+    0 14px 24px -14px color-mix(in oklab, var(--ink) 35%, transparent);
 }
 
 /* Book covers get a little spine shading. */

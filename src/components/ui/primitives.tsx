@@ -21,8 +21,8 @@ export function Button({
   return (
     <button
       type="button"
-      className={`inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-[background-color,filter,color] disabled:pointer-events-none disabled:opacity-40 ${
-        size === 'sm' ? 'h-8 px-3 text-xs' : 'h-9.5 px-4 text-sm'
+      className={`inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-[background-color,filter,color] disabled:pointer-events-none disabled:opacity-40 ${
+        size === 'sm' ? 'h-8 px-3.5 text-xs' : 'h-10 px-5 text-sm'
       } ${VARIANTS[variant]} ${className}`}
       {...props}
     />
@@ -42,7 +42,7 @@ export function IconButton({
       aria-label={label}
       title={label}
       aria-pressed={active || undefined}
-      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-md transition-colors disabled:pointer-events-none disabled:opacity-35 [&_svg]:size-[1.1rem] ${
+      className={`inline-flex size-9 shrink-0 items-center justify-center rounded-full transition-colors disabled:pointer-events-none disabled:opacity-35 [&_svg]:size-[1.1rem] ${
         active ? 'bg-accent-soft text-accent-strong' : 'text-muted hover:bg-hover hover:text-ink'
       } ${className}`}
       {...props}

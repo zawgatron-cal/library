@@ -4,6 +4,7 @@ import type { Book } from '../../lib/db'
 import { useBooks, useHighlightCounts, useHighlights } from '../../lib/hooks'
 import { bookProgress, displayPage, formatRelative } from '../../lib/format'
 import { importPdf, isPdf, openFailure } from '../../lib/pdf'
+import { CornerVines, LabelFlourish, OpenBookArt, VineFlourish } from '../ui/Flourishes'
 import { Wordmark } from '../ui/Logo'
 import { Button, IconButton, inputClass } from '../ui/primitives'
 import { useToast } from '../ui/toast'
@@ -105,15 +106,19 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
 
   return (
     <div className="relative flex h-full animate-fade-in flex-col">
-      <header className="flex shrink-0 items-center gap-4 px-6 py-4 sm:px-10">
+      <div className="ambient-wash" aria-hidden />
+      <CornerVines className="absolute top-0 left-0 z-[1] h-36 w-36 opacity-70" />
+      <CornerVines className="absolute top-0 right-0 z-[1] h-36 w-36 -scale-x-100 opacity-70" />
+
+      <header className="relative z-[1] flex shrink-0 items-center gap-4 px-6 py-5 sm:px-10">
         <Wordmark />
         <div className="relative mx-auto hidden w-full max-w-sm md:block">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
-          <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted" />
+          <input className={`${inputClass} rounded-full bg-surface/80 pl-10 shadow-soft`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
         </div>
         <div className="ml-auto flex items-center gap-1.5 md:ml-0">
           {importing > 0 && <span className="mr-2 animate-pulse text-xs font-semibold text-muted">Adding {importing}…</span>}
-          <Button variant="soft" size="sm" onClick={addBooks}>
+          <Button variant="soft" size="sm" onClick={addBooks} className="rounded-full">
             <Plus className="size-3.5" /> Add
           </Button>
           <IconButton label="Appearance & settings" onClick={onOpenSettings}>
@@ -133,13 +138,13 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         />
       </header>
 
-      <main className="flex-1 overflow-y-auto px-6 pb-20 sm:px-10">
+      <main className="relative z-[1] flex-1 overflow-y-auto px-6 pb-20 sm:px-10">
         {books === undefined ? null : (
           <div className="mx-auto max-w-6xl">
             {current && <ContinueCard book={current} />}
 
             {books.length > 0 && (
-              <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center gap-2 bg-canvas/85 px-2 py-3 backdrop-blur-md">
+              <div className="sticky top-0 z-10 -mx-2 mb-8 flex flex-wrap items-center gap-2 bg-canvas/70 px-2 py-3 backdrop-blur-md">
                 <div className="relative w-full md:hidden">
                   <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted" />
                   <input className={`${inputClass} rounded-full bg-surface pl-9`} placeholder="Search your library" value={query} onChange={(e) => setQuery(e.target.value)} />
@@ -195,11 +200,20 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
             </Shelves>
 
             {books.length === 0 && (
-              <p className="mx-auto mt-4 max-w-md text-center text-sm leading-relaxed text-muted">
-                Add PDFs of books, papers or course readers. They're kept on this computer — private, offline, and right where you left them.
-              </p>
+              <div className="mx-auto mt-6 flex max-w-md flex-col items-center text-center">
+                <OpenBookArt className="mb-4 h-32 w-44 text-flourish" />
+                <p className="font-display text-xl text-ink/80 italic">Your shelves are waiting</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted">
+                  Add PDFs of books, papers or course readers. They're kept on this computer — private, offline, and right where you left them.
+                </p>
+              </div>
             )}
-            {books.length > 0 && filtered && visible.length === 0 && <p className="py-10 text-center text-muted">Nothing on this shelf.</p>}
+            {books.length > 0 && filtered && visible.length === 0 && (
+              <div className="flex flex-col items-center py-12 text-muted">
+                <VineFlourish className="h-4 w-28 text-flourish/70" />
+                <p className="mt-3">Nothing on this shelf.</p>
+              </div>
+            )}
             {activeFilter === 'archived' && visible.length > 0 && (
               <p className="mt-2 text-center text-sm text-muted">Archived books are kept, with all their annotations, but stay off your shelves until you bring them back.</p>
             )}
@@ -279,12 +293,12 @@ function AddTile({ onClick, busy }: { onClick: () => void; busy: boolean }) {
       <button
         type="button"
         onClick={onClick}
-        className="group/add flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-sm)+1px)] border-2 border-dashed border-line-strong bg-surface/40 text-muted transition duration-300 ease-out hover:-translate-y-1.5 hover:border-accent hover:bg-accent-soft/50 hover:text-accent-strong"
+        className="group/add flex aspect-[2/3] w-full flex-col items-center justify-center gap-3 rounded-[calc(var(--radius-lg))] border-2 border-dashed border-flourish/35 bg-surface/35 text-muted transition duration-300 ease-out hover:-translate-y-1.5 hover:border-accent/50 hover:bg-accent-soft/40 hover:text-accent-strong"
       >
-        <span className="flex size-12 items-center justify-center rounded-full bg-surface shadow-soft transition group-hover/add:scale-105">
+        <span className="flex size-12 items-center justify-center rounded-full bg-surface/90 shadow-soft transition group-hover/add:scale-105">
           <Plus className={`size-5 ${busy ? 'animate-spin' : ''}`} />
         </span>
-        <span className="font-display text-base font-medium">Add books</span>
+        <span className="font-display text-base font-medium italic">Add books</span>
         <span className="px-4 text-center text-[0.7rem] leading-snug">or drop PDFs anywhere</span>
       </button>
     </div>
@@ -296,7 +310,9 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${active ? 'bg-ink text-canvas' : 'bg-surface text-muted hover:text-ink'}`}
+      className={`rounded-full px-3.5 py-1.5 text-xs font-bold transition ${
+        active ? 'bg-accent-soft text-accent-strong shadow-soft' : 'text-muted hover:bg-hover hover:text-ink'
+      }`}
     >
       {children}
     </button>
@@ -311,8 +327,8 @@ function ContinueCard({ book }: { book: Book }) {
   const open = (el: Element | null) => openBook(book.id, el)
 
   return (
-    <section className="animate-rise mt-3 mb-12">
-      <p className="text-xs font-bold tracking-wider text-flourish uppercase">Where you left off</p>
+    <section className="continue-glow animate-rise mt-2 mb-12">
+      <LabelFlourish>Where you left off</LabelFlourish>
       <div className="mt-5 flex flex-col gap-6 sm:flex-row sm:items-end sm:gap-8">
         <button
           type="button"
@@ -340,7 +356,7 @@ function ContinueCard({ book }: { book: Book }) {
             <div className="h-1.5 min-w-[8rem] flex-1 overflow-hidden rounded-full bg-line sm:max-w-xs">
               <div className="h-full rounded-full bg-flourish" style={{ width: `${Math.max(progress * 100, 2)}%` }} />
             </div>
-            <Button variant="primary" onClick={(e) => open(e.currentTarget.closest('section'))}>
+            <Button variant="primary" className="rounded-full" onClick={(e) => open(e.currentTarget.closest('section'))}>
               Continue <ArrowRight className="size-4" />
             </Button>
           </div>
