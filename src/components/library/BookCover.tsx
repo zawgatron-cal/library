@@ -22,7 +22,7 @@ export function BookCover({ book, className = '', morph = false }: { book: Book;
   return (
     <div
       data-cover
-      className={`book-cover vt-book relative aspect-[2/3] overflow-hidden rounded-[calc(var(--radius-sm)+1px)] bg-surface shadow-soft ${className}`}
+      className={`book-cover vt-book relative aspect-[2/3] overflow-hidden bg-surface ${className}`}
       style={style}
     >
       {book.cover ? <img src={book.cover} alt="" className="size-full object-cover object-top" draggable={false} /> : <PlainCover book={book} />}

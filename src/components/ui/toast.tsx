@@ -28,12 +28,15 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {createPortal(
         <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] flex -translate-x-1/2 flex-col items-center gap-2">
           {toasts.map((t) => (
-            <div key={t.id} className="flex animate-rise items-center gap-3 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-canvas shadow-lifted">
+            <div
+              key={t.id}
+              className="flex animate-rise items-center gap-3 border border-ink bg-surface px-4 py-2 font-display text-sm font-medium text-ink shadow-[3px_3px_0_color-mix(in_oklab,var(--ink)_55%,transparent)]"
+            >
               {t.message}
               {t.action && (
                 <button
                   type="button"
-                  className="pointer-events-auto -my-1 -mr-2 rounded-full px-2.5 py-1 text-[color-mix(in_oklab,var(--accent)_55%,var(--canvas))] transition hover:bg-[color-mix(in_oklab,var(--canvas)_14%,transparent)]"
+                  className="pointer-events-auto border-b border-ink px-0.5 font-display text-sm italic hover:border-b-2"
                   onClick={() => {
                     t.action!.onClick()
                     dismiss(t.id)

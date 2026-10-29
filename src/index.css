@@ -61,17 +61,17 @@
 }
 
 :root {
-  --canvas: #f5f5f5;
-  --surface: #fdfbf7;
+  --canvas: #efebe3;
+  --surface: #fbf8f1;
   --ink: #1a1a1a;
   --muted: #4a4a4a;
   --accent: #1a1a1a;
-  --flourish: #4a4a4a;
+  --flourish: #5c5346;
   --paper: #fdfbf7;
-  --on-accent: #fdfbf7;
+  --on-accent: #fbf8f1;
   --highlight: #ffff00;
   --ui-font: 'EB Garamond Variable', Garamond, 'Iowan Old Style', Georgia, 'Times New Roman', serif;
-  --radius-unit: 0.25rem;
+  --radius-unit: 0.2rem;
   --tint-strength: 0.7;
 
   /* Annotation colours stay readable on paper; sun is the e-ink yellow mark. */
@@ -584,20 +584,133 @@ input[type='range'] {
   animation: none;
 }
 
-/* The shelf each row of books rests on — a matte paper ledge, not a gilt plinth. */
-.shelf-plank {
-  position: absolute;
-  left: -18px;
-  right: -18px;
-  height: 8px;
-  border-radius: 0;
-  background: color-mix(in oklab, var(--ink) 10%, var(--surface));
-  box-shadow:
-    inset 0 1px 0 color-mix(in oklab, var(--ink) 8%, transparent),
-    0 1px 0 color-mix(in oklab, var(--ink) 18%, transparent);
+/* ---------- Newspaper / literary ornaments ---------- */
+
+.masthead-rule {
+  height: 0;
+  border-top: 3px double var(--ink);
 }
 
-/* Book covers get a little spine shading — flat ink, no gloss. */
+.rule-double {
+  height: 5px;
+  border-top: 1.5px solid var(--ink);
+  border-bottom: 1.5px solid var(--ink);
+}
+
+.ornament-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ornament-label::before,
+.ornament-label::after {
+  content: '❧';
+  font-size: 0.85rem;
+  letter-spacing: 0;
+  color: color-mix(in oklab, var(--ink) 45%, transparent);
+  font-weight: 400;
+}
+
+.section-chip {
+  padding: 0.2rem 0.15rem 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 2px solid transparent;
+}
+
+.section-chip[data-active='true'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+.section-chip:hover {
+  color: var(--ink);
+}
+
+.cover-frame {
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--ink);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--ink) 18%, transparent),
+    0 0 0 3px var(--canvas),
+    0 0 0 4px color-mix(in oklab, var(--ink) 35%, transparent);
+}
+
+.pull-quote {
+  margin: 1rem 0 0;
+  padding: 0.15rem 0 0.15rem 1rem;
+  border-left: 3px solid var(--ink);
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.continue-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1.35rem;
+  padding-bottom: 0.15rem;
+  border-bottom: 1px solid var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-style: italic;
+  font-weight: 500;
+  color: var(--ink);
+  background: none;
+}
+
+.continue-link:hover {
+  border-bottom-width: 2px;
+}
+
+.continue-link:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.folio-empty {
+  border: 1.5px dashed color-mix(in oklab, var(--ink) 35%, transparent);
+  background:
+    linear-gradient(to right, color-mix(in oklab, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 1.1rem 100%,
+    linear-gradient(to bottom, color-mix(in oklab, var(--ink) 6%, transparent) 1px, transparent 1px) 0 0 / 100% 1.1rem,
+    var(--surface);
+}
+
+/* The shelf each row of books rests on — a ruled newspaper ledge. */
+.shelf-plank {
+  position: absolute;
+  left: -12px;
+  right: -12px;
+  height: 0;
+  border-top: 2px solid color-mix(in oklab, var(--ink) 28%, transparent);
+  border-bottom: 1px solid color-mix(in oklab, var(--ink) 55%, transparent);
+  background: none;
+  box-shadow: none;
+  transform: translateY(6px);
+}
+
+/* Book covers: flat print, no glass card. */
+.book-cover {
+  border-radius: 0 !important;
+  box-shadow:
+    1px 1px 0 color-mix(in oklab, var(--ink) 18%, transparent),
+    2px 2px 0 color-mix(in oklab, var(--ink) 10%, transparent) !important;
+}
+
 .book-cover::after {
   content: '';
   position: absolute;
@@ -606,10 +719,10 @@ input[type='range'] {
   border-radius: inherit;
   background: linear-gradient(
     90deg,
-    rgb(0 0 0 / 0.14) 0%,
-    rgb(0 0 0 / 0.04) 4%,
-    transparent 8%,
-    transparent 96%,
-    rgb(0 0 0 / 0.05) 100%
+    rgb(0 0 0 / 0.12) 0%,
+    rgb(0 0 0 / 0.03) 3%,
+    transparent 7%,
+    transparent 97%,
+    rgb(0 0 0 / 0.04) 100%
   );
 }

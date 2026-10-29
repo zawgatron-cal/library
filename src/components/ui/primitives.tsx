@@ -82,9 +82,9 @@ export function Dialog({
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 animate-fade-in bg-[color-mix(in_oklab,var(--ink)_28%,transparent)] backdrop-blur-[2px]" onClick={onClose} />
-      <div role="dialog" aria-label={title} className={`relative w-full ${width} animate-rise rounded-xl border border-line bg-surface shadow-lifted`}>
-        <div className="flex items-center justify-between px-6 pt-5 pb-2">
-          <h2 className="font-display text-xl font-medium">{title}</h2>
+      <div role="dialog" aria-label={title} className={`relative w-full ${width} animate-rise border border-ink bg-surface shadow-[4px_4px_0_color-mix(in_oklab,var(--ink)_40%,transparent)]`}>
+        <div className="flex items-center justify-between border-b border-ink/20 px-6 pt-5 pb-3">
+          <h2 className="font-display text-xl font-medium italic">{title}</h2>
           <IconButton label="Close" onClick={onClose} className="-mr-2">
             <X />
           </IconButton>
@@ -102,9 +102,9 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   return createPortal(
     <div className="fixed inset-0 z-50 flex justify-end">
       <div className="absolute inset-0 animate-fade-in bg-[color-mix(in_oklab,var(--ink)_18%,transparent)]" onClick={onClose} />
-      <aside role="dialog" aria-label={title} className="relative flex h-full w-full max-w-[26rem] animate-slide-in flex-col border-l border-line bg-surface shadow-lifted">
-        <div className="flex items-center justify-between px-6 pt-5 pb-3">
-          <h2 className="font-display text-2xl font-medium">{title}</h2>
+      <aside role="dialog" aria-label={title} className="relative flex h-full w-full max-w-[26rem] animate-slide-in flex-col border-l-2 border-ink bg-surface">
+        <div className="flex items-center justify-between border-b border-ink/20 px-6 pt-5 pb-3">
+          <h2 className="font-display text-2xl font-medium italic">{title}</h2>
           <IconButton label="Close" onClick={onClose} className="-mr-2">
             <X />
           </IconButton>
