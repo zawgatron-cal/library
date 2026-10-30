@@ -13,6 +13,8 @@ export type { PendingSelection, SelectionPart } from './selection'
 
 export type PageStackHandle = {
   scrollToPage: (page: number, options?: { smooth?: boolean; offset?: number }) => void
+  /** Smoothly nudge the reading surface by a fraction of the viewport (−1 = up/back, +1 = down/forward). */
+  scrollByViewport: (fraction: number) => void
   /** Keep the content under this viewport point fixed through the next layout change (e.g. zoom). */
   anchorAt: (clientX: number, clientY: number) => void
 }
@@ -51,12 +53,14 @@ type Props = {
   onHighlightHover: (id: string | null) => void
   onToggleBookmark: (page: number) => void
   onPinchZoom: (factor: number) => void
+  /** Fired for user-driven scrolling (wheel, trackpad, scrollbar) — not programmatic jumps. */
+  onUserScroll?: () => void
   ref?: Ref<PageStackHandle>
 }
 
 export function PageStack(props: Props) {
   const { pageSizes, scale, layout, direction, margins, gap, pageMode, initialPosition, highlights, rotations, ocrPages, activeHighlightId, bookmarkedPages, searchQuery } = props
-  const { onScrollPosition, onResize, onSelection, onHighlightClick, onHighlightHover, onToggleBookmark, onPinchZoom, ref } = props
+  const { onScrollPosition, onResize, onSelection, onHighlightClick, onHighlightHover, onToggleBookmark, onPinchZoom, onUserScroll, ref } = props
   const vertical = direction === 'vertical'
   const paged = layout !== 'continuous'
 
@@ -64,6 +68,8 @@ export function PageStack(props: Props) {
   const [viewport, setViewport] = useState({ scroll: 0, width: 0, height: 0 })
   const anchor = useRef<Anchor>({ page: initialPosition?.page ?? 1, offset: initialPosition?.offset ?? 0, crossFrac: 0.5, viewMain: -1, viewCross: -1 })
   const frame = useRef(0)
+  /** >0 while we scroll from code (jump / layout / keyboard nudge) so onUserScroll stays quiet. */
+  const programmaticScroll = useRef(0)
   const renderScale = useDebounced(scale, 220)
   // Pages kept ready just off screen draw a little after the ones in view, so those come first.
   const [nearbyScale, setNearbyScale] = useState<number | null>(null)
@@ -147,6 +153,15 @@ export function PageStack(props: Props) {
       if (!el) return
       setViewport((v) => ({ ...v, scroll: vertical ? el.scrollTop : el.scrollLeft }))
       report()
+      if (programmaticScroll.current === 0) onUserScroll?.()
+    })
+  }
+
+  const runProgrammaticScroll = (fn: () => void) => {
+    programmaticScroll.current++
+    fn()
+    requestAnimationFrame(() => {
+      programmaticScroll.current = Math.max(0, programmaticScroll.current - 1)
     })
   }
 
@@ -162,7 +177,9 @@ export function PageStack(props: Props) {
     const atCross = a.viewCross >= 0 ? a.viewCross : cross / 2
     const targetMain = paged && a.viewMain < 0 && a.offset === 0 ? cell.start : contentStart(cell) + a.offset * contentMain(cell) - atMain
     const targetCross = a.crossFrac * crossTotal - atCross
-    scrollWithoutSnap(el, vertical ? { top: targetMain, left: targetCross, behavior: 'instant' } : { left: targetMain, top: targetCross, behavior: 'instant' })
+    runProgrammaticScroll(() => {
+      scrollWithoutSnap(el, vertical ? { top: targetMain, left: targetCross, behavior: 'instant' } : { left: targetMain, top: targetCross, behavior: 'instant' })
+    })
     setViewport((v) => ({ ...v, scroll: vertical ? el.scrollTop : el.scrollLeft }))
     report()
     // Let the pages at the new position mount before the opening transition takes its snapshot.
@@ -276,7 +293,20 @@ export function PageStack(props: Props) {
         else if (paged) target = cell.start
         else target = cell.start - Math.min(gap, PAD) / 2 - 4
         const behavior = smooth ? 'smooth' : 'instant'
-        scrollWithoutSnap(el, vertical ? { top: Math.max(0, target), behavior } : { left: Math.max(0, target), behavior })
+        runProgrammaticScroll(() => {
+          scrollWithoutSnap(el, vertical ? { top: Math.max(0, target), behavior } : { left: Math.max(0, target), behavior })
+        })
+      },
+      scrollByViewport(fraction) {
+        const el = scrollEl.current
+        if (!el) return
+        const span = (vertical ? el.clientHeight : el.clientWidth) * fraction
+        runProgrammaticScroll(() => {
+          scrollWithoutSnap(
+            el,
+            vertical ? { top: el.scrollTop + span, behavior: 'smooth' } : { left: el.scrollLeft + span, behavior: 'smooth' },
+          )
+        })
       },
       anchorAt(clientX, clientY) {
         const el = scrollEl.current
