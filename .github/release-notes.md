@@ -11,7 +11,11 @@
 
 ## What’s new in 1.0.3
 
-- **Smoother updates:** Library downloads new versions in the background on Windows, macOS, and Linux, then asks you to restart. No more hunting through GitHub Releases for the installer (macOS included, even while ad-hoc signed).
+- **Documents/Library folder** (desktop): optional shelf folder in your Documents. PDFs you add are kept there; drop files into the folder and they appear on your shelves. First-run prompt, or turn it on later in Settings → Storage.
+- **Document settings while reading:** Settings has Appearance | Document so you can edit title, author, shelves, favourite/finished/archived, and OCR without leaving the book.
+- **I / O** hold for gentle continuous scroll; **J** previous page, **K** next.
+- Annotation menu dismisses when you scroll (unless a note is focused), with a fade-out matching the pop-in.
+- **Smoother updates:** downloads new versions in the background on Windows, macOS, and Linux, then asks you to restart — including macOS while ad-hoc signed.
 
 ## First launch
 
