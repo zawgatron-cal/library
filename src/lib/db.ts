@@ -42,6 +42,11 @@ export type Book = {
   oddPages?: Record<number, [number, number, number]>
   /** Password the PDF opens with, if it's protected. Kept beside the file so it's only asked for once. */
   password?: string
+  /**
+   * Relative path inside the desktop Documents/Library folder. When set, the PDF lives on disk there
+   * instead of (or as well as) the IndexedDB files store.
+   */
+  shelfFile?: string | null
 }
 
 export type OcrStatus = 'queued' | 'paused' | 'done'
@@ -134,12 +139,22 @@ export async function getBook(id: string) {
 }
 
 export async function getBookFile(id: string) {
+  const book = await getBook(id)
+  if (book?.shelfFile) {
+    const api = typeof window !== 'undefined' ? window.libraryDesktop : undefined
+    if (api) {
+      const buf = await api.readShelfFile(book.shelfFile)
+      return new Blob([buf], { type: 'application/pdf' })
+    }
+  }
   return (await db()).get('files', id)
 }
 
-export async function addBook(book: Book, file: Blob) {
+export async function addBook(book: Book, file: Blob | null) {
   const tx = (await db()).transaction(['books', 'files'], 'readwrite')
-  await Promise.all([tx.objectStore('books').put(book), tx.objectStore('files').put(file, book.id), tx.done])
+  const ops: Promise<unknown>[] = [tx.objectStore('books').put(book)]
+  if (file && !book.shelfFile) ops.push(tx.objectStore('files').put(file, book.id))
+  await Promise.all([...ops, tx.done])
   emit('books')
 }
 
@@ -156,6 +171,7 @@ export async function updateBook(id: string, patch: Partial<Book> | ((book: Book
 
 export async function deleteBook(id: string) {
   const database = await db()
+  const book = await database.get('books', id)
   const tx = database.transaction(['books', 'files', 'highlights', 'ocr'], 'readwrite')
   const highlightKeys = await tx.objectStore('highlights').index('bookId').getAllKeys(id)
   const ocrKeys = await tx.objectStore('ocr').index('bookId').getAllKeys(id)
@@ -166,9 +182,32 @@ export async function deleteBook(id: string) {
     ...ocrKeys.map((key) => tx.objectStore('ocr').delete(key)),
   ])
   await tx.done
+  if (book?.shelfFile && typeof window !== 'undefined' && window.libraryDesktop) {
+    await window.libraryDesktop.removeShelfFile(book.shelfFile).catch(() => {})
+  }
   emit('books')
   emit('highlights')
   emit('ocr')
+}
+
+/** Write an IndexedDB-stored PDF onto the desktop shelf and point the book at it. */
+export async function moveBookToShelf(id: string) {
+  const api = typeof window !== 'undefined' ? window.libraryDesktop : undefined
+  if (!api) return null
+  const database = await db()
+  const book = await database.get('books', id)
+  if (!book || book.shelfFile) return book?.shelfFile ?? null
+  const blob = await database.get('files', id)
+  if (!blob) return null
+  const relative = await api.placeOnShelf({
+    bytes: await blob.arrayBuffer(),
+    fileName: book.fileName || `${book.title}.pdf`,
+  })
+  await updateBook(id, { shelfFile: relative, fileName: relative })
+  const tx = database.transaction('files', 'readwrite')
+  await tx.store.delete(id)
+  await tx.done
+  return relative
 }
 
 export async function listHighlights(bookId: string) {

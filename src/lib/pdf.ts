@@ -1,6 +1,7 @@
 import type { PDFDocumentProxy, PDFPageProxy } from 'pdfjs-dist'
 import { pdfjs } from 'react-pdf'
-import { addBook, newId, type Book } from './db'
+import { addBook, listBooks, moveBookToShelf, newId, type Book } from './db'
+import { desktop, isDesktop, type ShelfStatus } from './desktop'
 
 const workerUrl = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString()
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
@@ -99,21 +100,46 @@ async function renderCover(pdf: PDFDocumentProxy) {
   return canvas.toDataURL('image/jpeg', 0.82)
 }
 
-export async function importPdf(file: File, ask: AskPassword): Promise<Book> {
-  const { pdf, password } = await openPdf(new Uint8Array(await file.arrayBuffer()), file.name, ask)
+async function placeOnDesktopShelf(file: File, sourcePath?: string | null) {
+  const api = desktop()
+  if (!api) return null
+  const status = await api.shelfStatus()
+  if (!status.enabled) return null
+  const path = sourcePath || api.pathForFile(file)
+  if (path) {
+    return api.placeOnShelf({ sourcePath: path, fileName: file.name, move: false })
+  }
+  return api.placeOnShelf({ bytes: await file.arrayBuffer(), fileName: file.name })
+}
+
+export async function importPdf(file: File, ask: AskPassword, opts?: { sourcePath?: string | null }): Promise<Book> {
+  const shelfFile = await placeOnDesktopShelf(file, opts?.sourcePath).catch(() => null)
+  const bytes = shelfFile
+    ? new Uint8Array(await desktop()!.readShelfFile(shelfFile))
+    : new Uint8Array(await file.arrayBuffer())
+  return bookFromPdfData(bytes, file.name, ask, shelfFile)
+}
+
+/** Build a Book record from open PDF bytes and optionally pin it to a shelf-relative path. */
+async function bookFromPdfData(
+  data: Uint8Array,
+  fileName: string,
+  ask: AskPassword,
+  shelfFile: string | null,
+): Promise<Book> {
+  const { pdf, password } = await openPdf(data, fileName, ask)
   try {
     const meta = await pdf.getMetadata().catch(() => null)
     const info = (meta?.info ?? {}) as Record<string, unknown>
     const cover = await renderCover(pdf).catch(() => null)
     const scanned = await looksScanned(pdf).catch(() => false)
-
     const book: Book = {
       id: newId(),
-      title: cleanMeta(info.Title) || titleFromFileName(file.name),
+      title: cleanMeta(info.Title) || titleFromFileName(fileName),
       author: cleanMeta(info.Author),
       tags: [],
-      fileName: file.name,
-      fileSize: file.size,
+      fileName: shelfFile || fileName,
+      fileSize: data.byteLength,
       pageCount: pdf.numPages,
       cover,
       addedAt: Date.now(),
@@ -128,12 +154,68 @@ export async function importPdf(file: File, ask: AskPassword): Promise<Book> {
       notes: '',
       ocr: scanned ? 'queued' : null,
       ...(password ? { password } : {}),
+      ...(shelfFile ? { shelfFile } : {}),
     }
-    await addBook(book, new Blob([file], { type: 'application/pdf' }))
+    const fileBytes = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
+    await addBook(book, shelfFile ? null : new Blob([fileBytes], { type: 'application/pdf' }))
     return book
   } finally {
     pdf.destroy()
   }
+}
+
+/** Import a PDF already on disk (desktop file picker). Copies into Documents/Library when the shelf is on. */
+export async function importPdfFromPath(sourcePath: string, ask: AskPassword): Promise<Book> {
+  const api = desktop()
+  if (!api) throw new Error('Desktop only')
+  const fileName = sourcePath.split(/[/\\]/).pop() || 'book.pdf'
+  const status = await api.shelfStatus()
+  if (!status.enabled) await api.enableShelf()
+  const shelfFile = await api.placeOnShelf({ sourcePath, fileName, move: false })
+  const data = new Uint8Array(await api.readShelfFile(shelfFile))
+  return bookFromPdfData(data, fileName, ask, shelfFile)
+}
+
+/** Turn on Documents/Library, move any blob-stored PDFs there, and open the folder. */
+export async function activateShelf(): Promise<{ status: ShelfStatus; moved: number }> {
+  const api = desktop()
+  if (!api) throw new Error('Desktop only')
+  const status = await api.enableShelf()
+  const books = await listBooks()
+  let moved = 0
+  for (const book of books) {
+    if (book.shelfFile) continue
+    try {
+      if (await moveBookToShelf(book.id)) moved++
+    } catch {
+      /* keep blob copy */
+    }
+  }
+  await api.openShelf()
+  return { status, moved }
+}
+
+/** Add any PDFs sitting in Documents/Library that aren't on the shelves yet. */
+export async function syncShelfFolder(ask: AskPassword) {
+  if (!isDesktop()) return []
+  const api = desktop()
+  if (!api) return []
+  const status = await api.shelfStatus()
+  if (!status.enabled) return []
+  const onDisk = await api.listShelf()
+  const books = await listBooks()
+  const known = new Set(books.map((b) => b.shelfFile).filter(Boolean) as string[])
+  const added: Book[] = []
+  for (const pdf of onDisk) {
+    if (known.has(pdf.relative)) continue
+    try {
+      const data = new Uint8Array(await api.readShelfFile(pdf.relative))
+      added.push(await bookFromPdfData(data, pdf.name, ask, pdf.relative))
+    } catch {
+      /* skip unreadable */
+    }
+  }
+  return added
 }
 
 /** By name or type, or failing those (files saved without an extension) by the `%PDF-` signature near the start. */

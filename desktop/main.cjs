@@ -2,6 +2,7 @@
 // IndexedDB, module workers, WebAssembly and fetch behave exactly as they do on the web.
 const { app, BrowserWindow, Menu, net, protocol, screen, shell } = require('electron')
 const { setupUpdates } = require('./update.cjs')
+const { registerLibraryIpc } = require('./library-fs.cjs')
 const fs = require('node:fs')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')
@@ -77,7 +78,13 @@ function createWindow() {
     title: 'Library',
     backgroundColor: '#ebe4d6',
     icon: isMac ? undefined : path.join(__dirname, 'icons', 'icon.png'),
-    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, spellcheck: false },
+    webPreferences: {
+      contextIsolation: true,
+      sandbox: true,
+      nodeIntegration: false,
+      spellcheck: false,
+      preload: path.join(__dirname, 'preload.cjs'),
+    },
   })
   if (bounds.maximized) win.maximize()
   win.once('ready-to-show', () => win.show())
@@ -144,6 +151,7 @@ app.whenReady().then(() => {
     if (!file.startsWith(DIST + path.sep)) return new Response('Not found', { status: 404 })
     return net.fetch(pathToFileURL(file).toString())
   })
+  registerLibraryIpc()
   setMenu()
   createWindow()
   app.on('activate', () => BrowserWindow.getAllWindows().length === 0 && createWindow())

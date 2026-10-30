@@ -1,9 +1,10 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Archive, ArrowRight, Plus, Search, Settings2, Upload } from 'lucide-react'
 import type { Book } from '../../lib/db'
+import { desktop, isDesktop, type ShelfStatus } from '../../lib/desktop'
 import { useBooks, useHighlightCounts, useHighlights } from '../../lib/hooks'
 import { bookProgress, displayPage, formatRelative } from '../../lib/format'
-import { importPdf, isPdf, openFailure } from '../../lib/pdf'
+import { activateShelf, importPdf, importPdfFromPath, isPdf, openFailure, syncShelfFolder } from '../../lib/pdf'
 import { CornerVines, LabelFlourish, OpenBookArt, VineFlourish } from '../ui/Flourishes'
 import { Wordmark } from '../ui/Logo'
 import { Button, IconButton, inputClass } from '../ui/primitives'
@@ -14,6 +15,7 @@ import { BookCover } from './BookCover'
 import { openBook, screenReady } from '../../lib/router'
 import { BookDetailsSheet } from './BookDetails'
 import { DeleteBookDialog } from './DeleteBookDialog'
+import { ShelfSetupDialog } from './ShelfSetupDialog'
 
 type Filter = 'all' | 'reading' | 'unread' | 'finished' | 'favorites' | 'archived'
 type Sort = 'opened' | 'added' | 'title' | 'author' | 'progress'
@@ -57,6 +59,31 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
   const [deleting, setDeleting] = useState<Book | null>(null)
   const dragging = useFileDrag(handleFiles)
   const [askPassword, passwordDialog] = usePasswordPrompt()
+  const [shelf, setShelf] = useState<ShelfStatus | null>(null)
+
+  useEffect(() => {
+    if (!isDesktop()) return
+    desktop()
+      ?.shelfStatus()
+      .then(setShelf)
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (!shelf?.enabled) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const added = await syncShelfFolder(askPassword)
+        if (!cancelled && added.length) toast(added.length === 1 ? `Found “${added[0].title}” in your Library folder` : `Added ${added.length} books from your Library folder`)
+      } catch {
+        /* ignore */
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [shelf?.enabled, askPassword, toast])
 
   async function handleFiles(files: File[]) {
     const checks = await Promise.all(files.map(isPdf))
@@ -68,7 +95,8 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
     setImporting((n) => n + pdfs.length)
     for (const file of pdfs) {
       try {
-        const book = await importPdf(file, askPassword)
+        const sourcePath = desktop()?.pathForFile(file) ?? null
+        const book = await importPdf(file, askPassword, { sourcePath })
         toast(`Added “${book.title}”`)
       } catch (err) {
         const reason = openFailure(err)
@@ -82,7 +110,43 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
     }
   }
 
-  const addBooks = () => fileInput.current?.click()
+  const addBooks = async () => {
+    const api = desktop()
+    if (api && shelf?.enabled) {
+      const paths = await api.pickPdfs()
+      if (!paths.length) return
+      setImporting((n) => n + paths.length)
+      for (const path of paths) {
+        try {
+          const book = await importPdfFromPath(path, askPassword)
+          toast(`Added “${book.title}”`)
+        } catch (err) {
+          const reason = openFailure(err)
+          if (reason) toast(`Couldn't add ${path.split(/[/\\]/).pop()}: ${reason}`)
+        } finally {
+          setImporting((n) => n - 1)
+        }
+      }
+      return
+    }
+    fileInput.current?.click()
+  }
+
+  const enableShelf = async () => {
+    try {
+      const { status, moved } = await activateShelf()
+      setShelf(status)
+      toast(
+        moved
+          ? `Library folder ready — moved ${moved} book${moved === 1 ? '' : 's'} into Documents/Library`
+          : 'Library folder ready — new PDFs will live in Documents/Library',
+      )
+      const added = await syncShelfFolder(askPassword)
+      if (added.length) toast(`Also found ${added.length} PDF${added.length === 1 ? '' : 's'} already in the folder`)
+    } catch {
+      toast("Couldn't set up the Library folder")
+    }
+  }
   const allTags = useMemo(() => [...new Set((books ?? []).flatMap((b) => b.tags))].sort(), [books])
 
   const shelved = useMemo(() => (books ?? []).filter((b) => !b.archivedAt), [books])
@@ -204,7 +268,9 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
                 <OpenBookArt className="mb-4 h-32 w-44 text-flourish" />
                 <p className="font-display text-xl text-ink/80 italic">Your shelves are waiting</p>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
-                  Add PDFs of books, papers or course readers. They're kept on this computer — private, offline, and right where you left them.
+                  {shelf?.enabled
+                    ? 'Add PDFs here, or drop them into your Documents/Library folder — they’ll appear on these shelves.'
+                    : "Add PDFs of books, papers or course readers. They're kept on this computer — private, offline, and right where you left them."}
                 </p>
               </div>
             )}
@@ -243,6 +309,20 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         />
       )}
       {deleting && <DeleteBookDialog book={deleting} onClose={() => setDeleting(null)} />}
+      {shelf && !shelf.prompted && (
+        <ShelfSetupDialog
+          folderPath={shelf.path}
+          onEnable={() => {
+            void enableShelf()
+          }}
+          onSkip={() => {
+            void desktop()
+              ?.declineShelf()
+              .then(setShelf)
+              .catch(() => {})
+          }}
+        />
+      )}
       {passwordDialog}
     </div>
   )
