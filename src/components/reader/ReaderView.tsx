@@ -393,7 +393,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           e.preventDefault()
           step(1)
           break
-        case 'j':
+        case 'k':
         case 'n':
         case 'PageDown':
           e.preventDefault()
@@ -405,7 +405,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           e.preventDefault()
           step(-1)
           break
-        case 'k':
+        case 'j':
         case 'PageUp':
           e.preventDefault()
           step(-1)

@@ -101,8 +101,8 @@ Use the current **1.0.2** build from Releases when published. **1.0.1** added up
 
 | Keys                     | Action                 |
 | ------------------------ | ---------------------- |
-| <kbd>→</kbd> / <kbd>J</kbd> | Next page           |
-| <kbd>←</kbd> / <kbd>K</kbd> | Previous page       |
+| <kbd>→</kbd> / <kbd>K</kbd> | Next page           |
+| <kbd>←</kbd> / <kbd>J</kbd> | Previous page       |
 | <kbd>G</kbd>             | Go to page             |
 | <kbd>Backspace</kbd> / <kbd>Delete</kbd> | Delete selected annotation |
 | <kbd>Backspace</kbd>     | Back after a jump      |

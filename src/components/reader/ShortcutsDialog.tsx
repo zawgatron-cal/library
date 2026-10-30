@@ -1,8 +1,8 @@
 import { Dialog, Kbd } from '../ui/primitives'
 
 const SHORTCUTS: [string[], string][] = [
-  [['→', 'J'], 'Next page'],
-  [['←', 'K'], 'Previous page'],
+  [['→', 'K'], 'Next page'],
+  [['←', 'J'], 'Previous page'],
   [['G'], 'Go to page…'],
   [['⌫', 'Del'], 'Delete selected annotation'],
   [['⌫'], 'Back after a jump'],
