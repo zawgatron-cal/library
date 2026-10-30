@@ -372,6 +372,14 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
 
   const openTab = useCallback((tab: SidebarTab) => setUi((u) => ({ ...u, sidebar: tab })), [setUi])
 
+  /** Close the annotation chrome when the page moves, unless a note is being typed. */
+  const dismissPopoverUnlessNote = useCallback(() => {
+    if (document.activeElement instanceof HTMLTextAreaElement) return
+    setPopover(null)
+    setActiveHighlightId(null)
+    window.getSelection()?.removeAllRanges()
+  }, [])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
@@ -387,6 +395,16 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
       if (popover?.kind === 'selection' && e.key.length === 1) return
       const horizontal = direction === 'horizontal'
       switch (e.key) {
+        case 'i':
+          e.preventDefault()
+          dismissPopoverUnlessNote()
+          stack.current?.scrollByViewport(-0.85)
+          break
+        case 'o':
+          e.preventDefault()
+          dismissPopoverUnlessNote()
+          stack.current?.scrollByViewport(0.85)
+          break
         case 'ArrowRight':
         case 'ArrowDown':
           if (e.key === (horizontal ? 'ArrowDown' : 'ArrowRight') && layout === 'continuous') return
@@ -492,7 +510,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, activeHighlightId, focus, dialog, goBack, rotateView])
+  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, activeHighlightId, focus, dialog, goBack, rotateView, dismissPopoverUnlessNote])
 
   /* ----- focus-mode chrome ----- */
 
@@ -675,6 +693,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
                   onHighlightHover={setHoverHighlightId}
                   onToggleBookmark={toggleBookmark}
                   onPinchZoom={onPinchZoom}
+                  onUserScroll={dismissPopoverUnlessNote}
                 />
               </div>
             ) : (
