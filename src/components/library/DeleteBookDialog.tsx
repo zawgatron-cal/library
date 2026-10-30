@@ -1,7 +1,7 @@
 import { deleteBook, type Book } from '../../lib/db'
 import { Button, Dialog } from '../ui/primitives'
 
-export function DeleteBookDialog({ book, onClose }: { book: Book; onClose: () => void }) {
+export function DeleteBookDialog({ book, onClose, onDeleted }: { book: Book; onClose: () => void; onDeleted?: () => void }) {
   return (
     <Dialog
       title="Remove from library?"
@@ -16,6 +16,7 @@ export function DeleteBookDialog({ book, onClose }: { book: Book; onClose: () =>
             onClick={async () => {
               await deleteBook(book.id)
               onClose()
+              onDeleted?.()
             }}
           >
             Remove

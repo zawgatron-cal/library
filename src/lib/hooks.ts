@@ -28,8 +28,8 @@ export function useBooks(): Book[] | undefined {
   return useLiveQuery(['books'], listBooks, [])
 }
 
-export function useBook(id: string): Book | null | undefined {
-  return useLiveQuery(['books'], async () => (await getBook(id)) ?? null, [id])
+export function useBook(id: string | undefined | null): Book | null | undefined {
+  return useLiveQuery(['books'], async () => (id ? ((await getBook(id)) ?? null) : null), [id])
 }
 
 export function useHighlights(bookId: string): Highlight[] {

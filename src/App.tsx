@@ -24,7 +24,9 @@ function Shell() {
   return (
     <>
       {route.view === 'reader' ? <ReaderView bookId={route.bookId} onOpenSettings={openSettings} /> : <LibraryView onOpenSettings={openSettings} />}
-      {settingsOpen && <SettingsSheet onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && (
+        <SettingsSheet onClose={() => setSettingsOpen(false)} bookId={route.view === 'reader' ? route.bookId : undefined} />
+      )}
     </>
   )
 }

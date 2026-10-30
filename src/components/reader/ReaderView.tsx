@@ -684,7 +684,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           {passwordDialog}
 
           {!focus && book.ocr === 'queued' && (
-            <OcrPill progress={ocrProgress} onPause={() => pauseOcr(book.id).then(() => toast('Paused — resume from the book’s details'))} />
+            <OcrPill progress={ocrProgress} onPause={() => pauseOcr(book.id).then(() => toast('Paused — resume from Settings → Document'))} />
           )}
           {!focus && book.ocr == null && scanned && (
             <div className="absolute bottom-5 left-5 z-20 flex max-w-sm animate-rise flex-col gap-2.5 rounded-xl border border-line bg-surface p-4 shadow-lifted">
