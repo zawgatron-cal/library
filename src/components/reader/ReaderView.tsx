@@ -105,7 +105,10 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
   const [focus, setFocus] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [popover, setPopover] = useState<PopoverTarget | null>(null)
+  const [popoverExiting, setPopoverExiting] = useState(false)
   const [activeHighlightId, setActiveHighlightId] = useState<string | null>(null)
+  const ioHeld = useRef<'i' | 'o' | null>(null)
+  const ioRaf = useRef(0)
   const [hoverHighlightId, setHoverHighlightId] = useState<string | null>(null)
   const [dialog, setDialog] = useState<'help' | 'goto' | null>(null)
   const [history, setHistory] = useState<number[]>([])
@@ -339,18 +342,42 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
     [book.id],
   )
 
+  const openPopover = useCallback((next: PopoverTarget | null) => {
+    setPopoverExiting(false)
+    setPopover(next)
+  }, [])
+
+  const beginClosePopover = useCallback(() => {
+    setPopoverExiting(true)
+    setActiveHighlightId(null)
+    window.getSelection()?.removeAllRanges()
+  }, [])
+
+  const finishClosePopover = useCallback(() => {
+    setPopover(null)
+    setPopoverExiting(false)
+    setActiveHighlightId(null)
+  }, [])
+
   const onSelection = useCallback(
     (selection: PendingSelection | null) => {
       setActiveHighlightId(null)
-      setPopover(selection ? { kind: 'selection', text: selection.text, anchor: selection.anchor, create: createFromSelection(selection) } : null)
+      if (selection) {
+        openPopover({ kind: 'selection', text: selection.text, anchor: selection.anchor, create: createFromSelection(selection) })
+      } else if (popover && !popoverExiting) {
+        beginClosePopover()
+      }
     },
-    [createFromSelection],
+    [createFromSelection, openPopover, beginClosePopover, popover, popoverExiting],
   )
 
-  const onHighlightClick = useCallback((highlight: Highlight, anchor: { x: number; y: number }) => {
-    setActiveHighlightId(highlight.id)
-    setPopover({ kind: 'highlight', highlight, anchor })
-  }, [])
+  const onHighlightClick = useCallback(
+    (highlight: Highlight, anchor: { x: number; y: number }) => {
+      setActiveHighlightId(highlight.id)
+      openPopover({ kind: 'highlight', highlight, anchor })
+    },
+    [openPopover],
+  )
 
   const jumpTo = useCallback(
     (page: number, highlightId?: string) => {
@@ -375,12 +402,19 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
   /** Close the annotation chrome when the page moves, unless a note is being typed. */
   const dismissPopoverUnlessNote = useCallback(() => {
     if (document.activeElement instanceof HTMLTextAreaElement) return
-    setPopover(null)
-    setActiveHighlightId(null)
-    window.getSelection()?.removeAllRanges()
-  }, [])
+    if (popover && !popoverExiting) beginClosePopover()
+  }, [popover, popoverExiting, beginClosePopover])
+
+  /** I/O: gentle continuous scroll while held — about half a viewport per second. */
+  const IO_VIEWPORTS_PER_SEC = 0.48
 
   useEffect(() => {
+    const stopIo = () => {
+      ioHeld.current = null
+      if (ioRaf.current) cancelAnimationFrame(ioRaf.current)
+      ioRaf.current = 0
+    }
+
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
       if (mod && e.key.toLowerCase() === 'f') {
@@ -396,15 +430,24 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
       const horizontal = direction === 'horizontal'
       switch (e.key) {
         case 'i':
+        case 'o': {
           e.preventDefault()
+          if (e.repeat && ioHeld.current === e.key) return
           dismissPopoverUnlessNote()
-          stack.current?.scrollByViewport(-0.85)
+          stopIo()
+          ioHeld.current = e.key
+          const dir = e.key === 'i' ? -1 : 1
+          let last = performance.now()
+          const tick = (now: number) => {
+            if (ioHeld.current !== e.key) return
+            const dt = Math.min(0.05, (now - last) / 1000)
+            last = now
+            stack.current?.scrollByViewport(dir * IO_VIEWPORTS_PER_SEC * dt, { smooth: false })
+            ioRaf.current = requestAnimationFrame(tick)
+          }
+          ioRaf.current = requestAnimationFrame(tick)
           break
-        case 'o':
-          e.preventDefault()
-          dismissPopoverUnlessNote()
-          stack.current?.scrollByViewport(0.85)
-          break
+        }
         case 'ArrowRight':
         case 'ArrowDown':
           if (e.key === (horizontal ? 'ArrowDown' : 'ArrowRight') && layout === 'continuous') return
@@ -483,10 +526,7 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
           const id = activeHighlightId ?? (popover?.kind === 'highlight' ? popover.highlight.id : null)
           if (id) {
             e.preventDefault()
-            void deleteHighlight(id).then(() => {
-              setPopover(null)
-              setActiveHighlightId(null)
-            })
+            void deleteHighlight(id).then(() => beginClosePopover())
           } else if (e.key === 'Backspace') {
             goBack()
           }
@@ -495,22 +535,35 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
         case 'h':
           if (popover?.kind === 'selection') {
             popover.create('sun').then(() => window.getSelection()?.removeAllRanges())
-            setPopover(null)
+            beginClosePopover()
           }
           break
         case '?':
           setDialog('help')
           break
         case 'Escape':
-          if (popover) setPopover(null)
+          if (popover && !popoverExiting) beginClosePopover()
           else if (focus) setFocus(false)
           setActiveHighlightId(null)
           break
       }
     }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'i' || e.key === 'o') {
+        if (ioHeld.current === e.key) stopIo()
+      }
+    }
+    const onBlur = () => stopIo()
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, activeHighlightId, focus, dialog, goBack, rotateView, dismissPopoverUnlessNote])
+    window.addEventListener('keyup', onKeyUp)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKeyUp)
+      window.removeEventListener('blur', onBlur)
+      stopIo()
+    }
+  }, [step, stepZoom, applyZoom, toggleBookmark, currentPage, bookmarked, toast, setLayout, layout, direction, margins, setUi, openTab, popover, popoverExiting, activeHighlightId, focus, dialog, goBack, rotateView, dismissPopoverUnlessNote, beginClosePopover])
 
   /* ----- focus-mode chrome ----- */
 
@@ -764,10 +817,8 @@ function Reader({ book, file, onOpenSettings }: { book: Book; file: Blob; onOpen
         <AnnotationPopover
           key={popover.kind === 'highlight' ? popover.highlight.id : `${popover.anchor.x},${popover.anchor.y}`}
           target={popover}
-          onClose={() => {
-            setPopover(null)
-            setActiveHighlightId(null)
-          }}
+          exiting={popoverExiting}
+          onClose={finishClosePopover}
           onHighlightCreated={(highlight) => setActiveHighlightId(highlight.id)}
           onCopied={() => toast('Copied to clipboard')}
         />

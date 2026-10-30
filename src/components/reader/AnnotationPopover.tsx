@@ -11,6 +11,8 @@ const COLOR_NAMES: Record<HighlightColor, string> = {
   lilac: 'Lilac',
 }
 
+const SINK_MS = 200
+
 export type PopoverTarget =
   | { kind: 'selection'; text: string; anchor: { x: number; y: number }; create: (color: HighlightColor) => Promise<Highlight> }
   | {
@@ -21,13 +23,21 @@ export type PopoverTarget =
       draft?: { note: string }
     }
 
+function motionReduced() {
+  return document.documentElement.dataset.reduceMotion === 'true' || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
 export function AnnotationPopover({
   target,
+  exiting = false,
   onClose,
   onCopied,
   onHighlightCreated,
 }: {
   target: PopoverTarget
+  /** Parent-driven dismiss (e.g. page scroll) — plays the sink animation then calls onClose. */
+  exiting?: boolean
+  /** Called after the exit animation finishes (or immediately if motion is reduced). */
   onClose: () => void
   onCopied: () => void
   onHighlightCreated?: (highlight: Highlight) => void
@@ -35,13 +45,16 @@ export function AnnotationPopover({
   const ref = useRef<HTMLDivElement>(null)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const saved = useRef(false)
+  const closed = useRef(false)
   const seed = useRef(target.kind === 'highlight' ? (target.draft?.note ?? '') : '')
   const typingStarted = useRef(false)
+  const [leaving, setLeaving] = useState(false)
   const [draft, setDraft] = useState(target.kind === 'highlight' && !!target.draft)
   const [pos, setPos] = useState({ left: target.anchor.x, top: target.anchor.y + 10 })
   const [editing, setEditing] = useState<Highlight | null>(target.kind === 'highlight' ? target.highlight : null)
   const [note, setNote] = useState(target.kind === 'highlight' ? (target.draft?.note ?? target.highlight.note) : '')
   const [showNote, setShowNote] = useState(target.kind === 'highlight' && (!!target.draft || !!target.highlight.note))
+  const sinking = leaving || exiting
 
   useLayoutEffect(() => {
     const el = ref.current
@@ -78,10 +91,31 @@ export function AnnotationPopover({
 
   const text = target.kind === 'highlight' ? target.highlight.text : target.text
 
+  const finishClose = useCallback(() => {
+    if (closed.current) return
+    closed.current = true
+    onClose()
+  }, [onClose])
+
+  const requestClose = useCallback(() => {
+    if (leaving || exiting || closed.current) return
+    setLeaving(true)
+  }, [leaving, exiting])
+
+  useEffect(() => {
+    if (!sinking) return
+    if (motionReduced()) {
+      finishClose()
+      return
+    }
+    const timer = window.setTimeout(finishClose, SINK_MS + 40)
+    return () => clearTimeout(timer)
+  }, [sinking, finishClose])
+
   const cancel = useCallback(async () => {
     if (draft && editing && !saved.current) await deleteHighlight(editing.id)
-    onClose()
-  }, [draft, editing, onClose])
+    requestClose()
+  }, [draft, editing, requestClose])
 
   // Esc stops the gesture (capture so the reader doesn’t treat it as a generic dismiss).
   useEffect(() => {
@@ -128,12 +162,12 @@ export function AnnotationPopover({
       setEditing(next)
       if (!showNote) {
         saved.current = true
-        onClose()
+        requestClose()
       }
     } else if (target.kind === 'selection') {
       await target.create(color)
       window.getSelection()?.removeAllRanges()
-      onClose()
+      requestClose()
     }
   }
 
@@ -151,7 +185,7 @@ export function AnnotationPopover({
   const saveNote = async () => {
     if (editing && note !== editing.note) await putHighlight({ ...editing, note })
     saved.current = true
-    onClose()
+    requestClose()
   }
 
   return createPortal(
@@ -162,7 +196,11 @@ export function AnnotationPopover({
       onMouseDown={(e) => {
         if (!(e.target instanceof HTMLTextAreaElement)) e.preventDefault()
       }}
-      className="fixed z-50 animate-rise rounded-lg border border-line bg-surface p-1.5 shadow-lifted"
+      onAnimationEnd={(e) => {
+        if (e.target !== ref.current) return
+        if (sinking) finishClose()
+      }}
+      className={`fixed z-50 rounded-lg border border-line bg-surface p-1.5 shadow-lifted ${sinking ? 'animate-sink pointer-events-none' : 'animate-rise'}`}
       style={{ left: pos.left, top: pos.top }}
     >
       <div className="flex items-center gap-1">
@@ -189,7 +227,7 @@ export function AnnotationPopover({
           onClick={() => {
             navigator.clipboard?.writeText(text)
             onCopied()
-            if (target.kind === 'selection') onClose()
+            if (target.kind === 'selection') requestClose()
           }}
         >
           <Copy />
@@ -200,7 +238,7 @@ export function AnnotationPopover({
             onClick={async () => {
               saved.current = true
               await deleteHighlight(editing.id)
-              onClose()
+              requestClose()
             }}
           >
             <Trash2 />

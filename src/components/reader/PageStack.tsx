@@ -13,8 +13,8 @@ export type { PendingSelection, SelectionPart } from './selection'
 
 export type PageStackHandle = {
   scrollToPage: (page: number, options?: { smooth?: boolean; offset?: number }) => void
-  /** Smoothly nudge the reading surface by a fraction of the viewport (−1 = up/back, +1 = down/forward). */
-  scrollByViewport: (fraction: number) => void
+  /** Nudge the reading surface by a fraction of the viewport (−1 = up/back, +1 = down/forward). */
+  scrollByViewport: (fraction: number, options?: { smooth?: boolean }) => void
   /** Keep the content under this viewport point fixed through the next layout change (e.g. zoom). */
   anchorAt: (clientX: number, clientY: number) => void
 }
@@ -297,15 +297,13 @@ export function PageStack(props: Props) {
           scrollWithoutSnap(el, vertical ? { top: Math.max(0, target), behavior } : { left: Math.max(0, target), behavior })
         })
       },
-      scrollByViewport(fraction) {
+      scrollByViewport(fraction, { smooth = true } = {}) {
         const el = scrollEl.current
         if (!el) return
         const span = (vertical ? el.clientHeight : el.clientWidth) * fraction
+        const behavior = smooth ? 'smooth' : 'instant'
         runProgrammaticScroll(() => {
-          scrollWithoutSnap(
-            el,
-            vertical ? { top: el.scrollTop + span, behavior: 'smooth' } : { left: el.scrollLeft + span, behavior: 'smooth' },
-          )
+          scrollWithoutSnap(el, vertical ? { top: el.scrollTop + span, behavior } : { left: el.scrollLeft + span, behavior })
         })
       },
       anchorAt(clientX, clientY) {
