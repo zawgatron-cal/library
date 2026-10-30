@@ -300,7 +300,6 @@ export function LibraryView({ onOpenSettings }: { onOpenSettings: () => void }) 
         <BookDetailsSheet
           key={detailsBook.id}
           book={detailsBook}
-          annotationCount={annotationCounts[detailsBook.id] ?? 0}
           onClose={() => setDetailsId(null)}
           onDelete={() => {
             setDetailsId(null)
